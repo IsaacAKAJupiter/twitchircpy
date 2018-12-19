@@ -27,7 +27,7 @@ bot = twitchircpy.Bot("oauth", "nick", "!", "jups", True)
 
 @bot.event
 def on_connect():
-    print("Connected!)
+    print("Connected!")
     
 @bot.event
 def on_message(message):
@@ -36,7 +36,7 @@ def on_message(message):
         
 @bot.event
 def on_sub(sub):
-    bot.send_message(sub.channel, f"Thank you @{sub.login} for subbing!"
+    bot.send_message(sub.channel, f"Thank you @{sub.login} for subbing!")
 
 bot.start()
 ```
