@@ -1,4 +1,6 @@
 # twitchircpy
+[![PyPI](https://img.shields.io/pypi/v/twitchircpy.svg)](https://pypi.python.org/pypi/twitchircpy/)
+[![PyPI](https://img.shields.io/pypi/pyversions/twitchircpy.svg)](https://pypi.python.org/pypi/twitchircpy/)
 
 twitchircpy is a wrapper for the Twitch IRC used for creating chat bots.
 

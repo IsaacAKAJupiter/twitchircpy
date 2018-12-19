@@ -3,3 +3,6 @@
 __pycache__/
 *.pyc
 *.buildinfo
+dist/
+build/
+twitchircpy.egg-info/
