@@ -202,6 +202,7 @@ class CustomCommandBot(twitchircpy.bot.Bot):
         unremovable_variables = ["user", "channel", "count", "timeuntil", "timesince"]
         if name in unremovable_variables:
             self._call_event("on_error", VariableError(name, "You cannot remove this variable."))
+            return
         
         # Actually remove it.
         for variable in self.variables:
@@ -437,9 +438,10 @@ class CustomCommandBot(twitchircpy.bot.Bot):
     @bot.ismoderator
     def _edit_command(self, info, command, *response):
         if self._check_chat_command(command, info.channel):
+            old = self._get_chat_command(command, info.channel)
             success, response = self._edit_chat_command(info, command, *response)
             if success:
-                self._call_event("chatcommand_edited", self._get_chat_command(command, info.channel))
+                self._call_event("chatcommand_edited", old, self._get_chat_command(command, info.channel))
                 return True
 
         self._call_event("on_error", ChatCommandError("editcommand", info.user, info.channel, f"An error occured when attempting to edit the command: {command}. Error: {response}"))
@@ -447,7 +449,7 @@ class CustomCommandBot(twitchircpy.bot.Bot):
 
     def _edit_chat_command(self, info, command_name, *response):
         command = self._get_chat_command(command_name, info.channel)
-        success, error = self._remove_chat_command(info, command_name)
+        success, error = self._remove_chat_command(info, command_name, edit=True)
         if success:
             success, error, response = self._add_chat_command(info.channel, command_name, *response, edit=True, cooldown=command.cooldown, permission=command.permission, count=command.count, timeuntil=command.timeuntil, timesince=command.timesince)
             if success:
@@ -477,6 +479,6 @@ class CustomCommandBot(twitchircpy.bot.Bot):
     def _append_events(self):
         events_len = len(self.events)
         self.events.append(twitchircpy.Event(events_len, "chatcommand_created", 1))
-        self.events.append(twitchircpy.Event(events_len + 1, "chatcommand_edited", 1))
+        self.events.append(twitchircpy.Event(events_len + 1, "chatcommand_edited", 2))
         self.events.append(twitchircpy.Event(events_len + 2, "chatcommand_removed", 1))
         self.events.append(twitchircpy.Event(events_len + 3, "chatcommand_fired", 2))

@@ -28,5 +28,9 @@ class Command():
         self.function = function
         self.cooldown = cooldown
 
+    @property
+    def description(self):
+        return self.function.__doc__
+
     def __repr__(self):
         return f"Command(name: {self.name}, cog: {self.cog})"

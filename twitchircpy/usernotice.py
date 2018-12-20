@@ -2,7 +2,7 @@ class UserNotice():
 
     """
     Class used for storing information sent from the USERNOTICE command from the IRC.
-    Used for notifying for subs, resubs, gifted subs, anonymous gifted subs, raids, rituals and charity events.
+    Used for notifying for subs, resubs, gifted subs, anonymous gifted subs, mystery gifted subs, raids, rituals and charity events.
     Charity is not in the documentation for Twitch IRC, not sure if it is for every charity event Twitch does.
     Worked for charity event occuring from December 12-27, 2018, with #charity cheering.
     Should not be manually created.
@@ -78,7 +78,10 @@ class UserNotice():
         return Ritual(self.get_params())
 
     def to_charity(self):
-        return 
+        return Charity(self.get_params())
+
+    def to_submysterygift(self):
+        return SubMysteryGift(self.get_params())
 
 class Sub(UserNotice):
 
@@ -156,3 +159,14 @@ class Charity(UserNotice):
 
     def __repr__(self):
         return f"Charity(charity: {self.msg_param_charity_name}, charity learn more: {self.msg_param_charity_learn_more}, total: {self.msg_param_total})"
+
+class SubMysteryGift(UserNotice):
+
+    """
+    This class is the exact same as class:UserNotice: except with a different name.
+    Created for specific msg_id of submysterygift.
+    Should not be manually created in most cases.
+    """
+
+    def __repr__(self):
+        return f"SubMysteryGift(channel: {self.channel}, user: {self.display_name})"

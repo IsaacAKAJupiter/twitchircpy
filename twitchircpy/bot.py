@@ -573,7 +573,7 @@ class Bot():
         self.events.append(Event(2, "on_userstate", 1))
         self.events.append(Event(3, "on_connect", 0))
         self.events.append(Event(4, "on_roomstate", 1))
-        self.events.append(Event(5, "dynamic_prefix", 2))
+        self.events.append(Event(5, "dynamic_prefix", 1))
         self.events.append(Event(6, "chatroom_join", 1))
         self.events.append(Event(7, "channel_join", 1))
         self.events.append(Event(8, "on_part", 1))
@@ -594,6 +594,8 @@ class Bot():
         self.events.append(Event(23, "on_raid", 1))
         self.events.append(Event(24, "on_ritual", 1))
         self.events.append(Event(25, "on_charity", 1))
+        self.events.append(Event(26, "on_submysterygift", 1))
+        self.events.append(Event(27, "command_fired", 2))
     
     def _get_event(self, event_name):
         for event in self.events:
@@ -650,7 +652,10 @@ class Bot():
         if f":tmi.twitch.tv USERNOTICE #" in line:
             usernotice = self._read_usernotice(line)
             self._call_event("on_usernotice", usernotice)
-            self._call_event(f"on_{usernotice.msg_id}", getattr(usernotice, f"to_{usernotice.msg_id}")())
+            if hasattr(usernotice, f"to_{usernotice.msg_id}"):
+                self._call_event(f"on_{usernotice.msg_id}", getattr(usernotice, f"to_{usernotice.msg_id}")())
+            else:
+                self._call_event("on_error", CommonError(f"Twitch sent an unknown type of USERNOTICE: \"{usernotice.msg_id}\". Please submit a new issue to https://github.com/IsaacAKAJupiter/twitchircpy/issues including \"USERNOTICE\", \"{usernotice.msg_id}\" and \"{line}\" somewhere in the title or comment."))
             return
 
         #USERSTATE.
@@ -877,7 +882,12 @@ class Bot():
         try:
             cog_o = importlib.import_module(cog)
         except ModuleNotFoundError:
-            self._call_event("on_error", CogError(cog, f"An error occured when trying to import the cog."))
+            if self._socket:
+                self._call_event("on_error", CogError(cog, f"An error occured when trying to import the cog."))
+            else:
+                warnings.warn(f"An error occured when importing cog: {cog}. This is a warning and not a class:Bot: error since it raised before \"run()\" was called.")
+            return
+
         self.cogs.append(cog_o)
         if self._check_for_valid_cog(cog_o) == False:
             self._call_event("on_error", CogError(cog, f"Attempt to add cog failed. Missing valid setup function."))
@@ -1004,7 +1014,7 @@ class Bot():
     # Normal command functions.
 
     def _handle_commands(self, info):
-        prefix = self._call_event("dynamic_prefix", self, info)
+        prefix = self._call_event("dynamic_prefix", info)
         prefix = self._prefix if not prefix else prefix
         if not isinstance(prefix, str):
             self._call_event("on_error", EventError("dynamic_prefix", "This callback must return a string as the prefix."))
@@ -1063,9 +1073,11 @@ class Bot():
                 except TypeError as e:
                     self._call_event("on_error", CommandError(command_o, info.user, info.channel, f"Error running function -> TypeError: {e}"))
                     return
-                # Check for cooldown.
+                # Add cooldown if command has it.
                 if command_o.cooldown:
                     self._add_cooldown(command_o, info.channel)
+                # Call event for command_fired.
+                self._call_event("command_fired", info, command_o)
             else:
                 self._call_event("on_error", CooldownError(command_o, info.user, info.channel, f"Command on cooldown, please wait {cooldown_o.time} seconds."))
 
@@ -1283,3 +1295,12 @@ class Bot():
         """
 
         self.send_message(channel, ".followersoff")
+
+    def delete(self, channel, message_id):
+        """
+        This is an IRC command for removing a single message from chat.
+        \nEquivalent to:
+        \nbot.send_message(channel, f".delete {message_id}")
+        """
+
+        self.send_message(channel, f".delete {message_id}")
