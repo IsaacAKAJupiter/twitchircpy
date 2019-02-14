@@ -4,7 +4,7 @@ class Notice():
     Class used for storing information sent from the NOTICE command from the IRC.
     Used for general notices from Twitch.
     Example: A channel's chat goes into slow mode.
-    Should not be manually created.
+    Should not be manually created in most cases.
     
     Parameters
     ==========
@@ -13,10 +13,10 @@ class Notice():
         All msg_id's can be found at the link below.
         https://dev.twitch.tv/docs/irc/msg-id/
     channel -> :str:
-        The Twitch channel name that NOTICE got sent to.
+        The channel that NOTICE got sent to.
     room -> :str: | :None:
         The chat room that NOTICE got sent to.
-        Can be None if the notice is just for a channel.
+        Can be :None: if the notice is just for a channel.
         A channel can have multiple chat rooms, so this is incase
         one of the chat rooms got sent a notice.
         More chat room information below. (First Paragraph)

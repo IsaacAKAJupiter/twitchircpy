@@ -6,6 +6,7 @@ import threading
 import sys
 import re
 import time
+import signal
 from functools import wraps
 
 from .command import Command
@@ -19,7 +20,7 @@ from .join_chatroom import JoinChatRoom
 from .part_channel import PartChannel
 from .jtv_mode import Mode
 from .cooldown import Cooldown
-from .errors import CommandError, CooldownError, DecoratorError, CogError, EventError, CommonError, TimedMessageError
+from .errors import CommandError, CooldownError, SilencedError, DecoratorError, CogError, EventError, CommonError, TimedMessageError
 from .clearchat import ClearChat, Ban
 from .clearmsg import ClearMsg
 from .general_notice import Notice
@@ -40,7 +41,7 @@ def command(func):
 
 def cooldown(time):
     """
-    This decorator is for allowing specific functions to have a cooldown.
+    This decorator is for allowing commands to have a cooldown.
     """
 
     def _dec_cooldown(func):
@@ -50,6 +51,19 @@ def cooldown(time):
         func._cooldown = time
         return func
     return _dec_cooldown
+
+def aliases(a):
+    """
+    This decorator is for allowing commands to have aliases.
+    """
+
+    def _dec_aliases(func):
+        if not isinstance(a, list):
+            warnings.warn("Aliases must be a list.")
+            return
+        func._aliases = a
+        return func
+    return _dec_aliases
 
 def ismoderator(func):
     """
@@ -80,8 +94,13 @@ def issubscriber(func):
     def _dec_issub(*args, **kwargs):
         if len(args) > 1:
             if isinstance(args[1], Info):
-                if "subscriber/1" in args[1].badges or "broadcaster/1" in args[1].badges:
-                    return func(*args, **kwargs)
+                try:
+                    badges = dict(item.split("/") for item in args[1].badges.split(","))
+                except ValueError:
+                    pass
+                else:
+                    if ("subscriber" in badges and int(badges["subscriber"]) > 0) or ("broadcaster" in badges and badges["broadcaster"] == "1"):
+                        return func(*args, **kwargs)
         if len(args) > 1:
             if inspect.isclass(type(args[0])):
                 if not isinstance(args[0], Bot):
@@ -212,6 +231,46 @@ def isturbo(func):
             return
     return _dec_isturbo
 
+def isvip(func):
+    """
+    This decorator is for allowing only VIP members (and the broadcaster) to use the specific command.
+    """
+
+    @wraps(func)
+    def _dec_isvip(*args, **kwargs):
+        if len(args) > 1:
+            if isinstance(args[1], Info):
+                if "vip/1" in args[1].badges or "broadcaster/1" in args[1].badges:
+                    return func(*args, **kwargs)
+        if len(args) > 1:
+            if inspect.isclass(type(args[0])):
+                if not isinstance(args[0], Bot):
+                    args[0].bot._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not VIP. Command used: {func.__name__}"))
+                else:
+                    args[0]._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not VIP. Command used: {func.__name__}"))
+            return
+    return _dec_isvip
+
+def ispremium(func):
+    """
+    This decorator is for allowing only premium (Prime) members (and the broadcaster) to use the specific command.
+    """
+
+    @wraps(func)
+    def _dec_ispremium(*args, **kwargs):
+        if len(args) > 1:
+            if isinstance(args[1], Info):
+                if "premium/1" in args[1].badges or "broadcaster/1" in args[1].badges:
+                    return func(*args, **kwargs)
+        if len(args) > 1:
+            if inspect.isclass(type(args[0])):
+                if not isinstance(args[0], Bot):
+                    args[0].bot._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not premium. Command used: {func.__name__}"))
+                else:
+                    args[0]._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not premium. Command used: {func.__name__}"))
+            return
+    return _dec_ispremium
+
 def check(check_func):
     """
     This decorator is for creating custom checks for your commands.
@@ -272,23 +331,21 @@ class Bot():
     oauth -> :str:
         The OAuth token for the Twitch account being used.
         Format: oauth:asdasd234asd234ad234asds23
-        Note, this is not an actual OAuth Token.
+        Note, this is not an actual OAuth token.
     nick -> :str:
-        The nickname (nick) must be your Twitch username/handle.
+        The nickname (nick) must be the Twitch account username/handle.
     prefix -> :str:
-        The prefix is used for the bot's commands.
-        These commands are added with cogs.
+        The prefix is used for commands.
         Mandatory since there is no default prefix.
     channel -> :str: | :list<str>:
-        Channel is the username(s) of the Twitch channel(s) 
-        that the bot will end up joining.
-        :str: for single channel.
+        Channel is the username(s) of the Twitch channel(s) to join.
+        :str: for a single channel.
         :list<str>: for multiple channels.
     reconnect -> :bool:
         Reconnect is for responding to Twitch's IRC Ping.
         Also for responding to Twitch's IRC Reconnect.
         This should be True on most occasions.
-        Could be False if using for temporary bot.
+        Could be False if using temporarily.
     """
     
     def __init__(self, oauth, nick, prefix, channel, reconnect):
@@ -311,6 +368,7 @@ class Bot():
         self.reconnect = reconnect
         self.cogs = []
         self.commands = []
+        self.silenced_commands = []
         self.events = []
         self._callbacks = {}
         self.cooldowns = []
@@ -321,9 +379,9 @@ class Bot():
         self._read_buffer = ""
         self._RECV_AMOUNT = 1024
         self.running = False
-        self.thread = None
-        self.cd_thread = None
-        self.td_thread = None
+        self._thread = None
+        self._cd_thread = None
+        self._td_thread = None
 
         self._define_events()
         self._define_builtin_commands()
@@ -350,19 +408,16 @@ class Bot():
     #             SOCKET              #
     ###################################
 
-    def _set_socket(self, s):
-        self._socket = s
-
     def _connect(self, host, port):
         if self._socket:
             self._socket.connect((host, port))
         else:
-            raise ValueError("Couldn't connect, bot doesn't have a socket.")
+            raise AttributeError("Couldn't connect, bot doesn't have a socket.")
 
     def _receive(self):
         try:
             self._read_buffer = self._read_buffer + self._socket.recv(self._RECV_AMOUNT).decode("utf-8")
-        except UnicodeDecodeError:
+        except (UnicodeDecodeError, socket.timeout, IOError):
             return None
         else:
             temp = self._read_buffer.split("\r\n")
@@ -373,13 +428,37 @@ class Bot():
         self._socket.send(f"{message}\r\n".encode("utf-8"))
 
     def _open_socket(self):
-        self._set_socket(socket.socket())
+        self._socket = socket.socket()
         self._connect("irc.chat.twitch.tv", 6667)
+        self._socket.settimeout(2)
         self._send_socket_message(f"PASS {self.oauth}")
         self._send_socket_message(f"NICK {self.nick}")
         self._send_socket_message("CAP REQ :twitch.tv/commands")
         self._send_socket_message("CAP REQ :twitch.tv/tags")
         self._send_socket_message("CAP REQ :twitch.tv/membership")
+
+    # Used to join a channel.
+    def _join_channel(self, channel):
+        self._send_socket_message(f"JOIN #{channel}")
+
+        read_buffer = ""
+        loading = True
+        while loading:
+            try:
+                read_buffer = read_buffer + self._socket.recv(self._RECV_AMOUNT).decode("utf-8")
+            except (UnicodeDecodeError, socket.timeout, IOError):
+                continue
+            else:
+                temp = read_buffer.split("\n")
+                read_buffer = temp.pop()
+
+            for line in temp:
+                if "JOIN" in line:
+                    join = self._read_join(line)
+                    self._call_event("channel_join", join)
+                    
+                if "End of /NAMES list" in line:
+                    loading = False
 
     # Called when bot starts to join all channels.
     def _join_room(self):
@@ -387,22 +466,7 @@ class Bot():
             if not isinstance(channel, str):
                 raise ValueError("One of the channels that was requested to join was not of type string.")
 
-            self._send_socket_message(f"JOIN #{channel}")
-
-            read_buffer = ""
-            loading = True
-            while loading:
-                read_buffer = read_buffer + self._socket.recv(self._RECV_AMOUNT).decode("utf-8")
-                temp = read_buffer.split("\n")
-                read_buffer = temp.pop()
-
-                for line in temp:
-                    if "JOIN" in line:
-                        join = self._read_join(line)
-                        self._call_event("channel_join", join)
-
-                    if "End of /NAMES list" in line:
-                        loading = False
+            self._join_channel(channel)
 
         self._call_event("on_connect")
 
@@ -412,23 +476,7 @@ class Bot():
         This method is used to allow the class:Bot: to dynamically join a channel whilst running.
         """
 
-        self._send_socket_message(f"JOIN #{channel}")
-
-        read_buffer = ""
-        loading = True
-        while loading:
-            read_buffer = read_buffer + self._socket.recv(self._RECV_AMOUNT).decode("utf-8")
-            temp = read_buffer.split("\n")
-            read_buffer = temp.pop()
-
-            for line in temp:
-                if "JOIN" in line:
-                    join = self._read_join(line)
-                    self._call_event("channel_join", join)
-                    
-                if "End of /NAMES list" in line:
-                    loading = False
-        
+        self._join_channel(channel)
         self.channels.append(channel)
 
     def part_channel(self, channel):
@@ -453,10 +501,13 @@ class Bot():
         self._join_room()
 
         self.running = True
-        self.thread = threading.Thread(target=self._run)
-        self.cd_thread = threading.Thread(target=self._run_cooldown)
-        self.thread.start()
-        self.cd_thread.start()
+        self._thread = threading.Thread(target=self._run)
+        self._cd_thread = threading.Thread(target=self._run_cooldown)
+        self._thread.start()
+        self._cd_thread.start()
+
+        # Make a signal handler to mainly stop CTRL + C causing errors.
+        signal.signal(signal.SIGINT, self._signal_handler)
 
     def start_timed_messages(self):
         """
@@ -465,11 +516,14 @@ class Bot():
         \nTo stop using timed messages, use "stop_timed_messages".
         """
 
-        self.td_thread = threading.Thread(target=self._run_timed_messages)
+        self._td_thread = threading.Thread(target=self._run_timed_messages)
         # Need self.running = True in both this and run so it runs if called before bot.run()
         self.running = True
         self._timed_messages_enabled = True
-        self.td_thread.start()
+        self._td_thread.start()
+
+    def _signal_handler(self, sig, frame):
+        self.stop()
     
     def _run(self):
         while self.running:
@@ -482,11 +536,15 @@ class Bot():
     def _run_cooldown(self):
         while self.running:
             time.sleep(1)
+            removed = []
             
             for cooldown in self.cooldowns:
                 cooldown.time -= 1
                 if cooldown.time <= 0:
-                    self.cooldowns.remove(cooldown)
+                    removed.append(cooldown)
+
+            for remove in removed:
+                self.cooldowns.remove(remove)
 
     def _run_timed_messages(self):
         while self.running and self._timed_messages_enabled:
@@ -514,7 +572,7 @@ class Bot():
     #         TIMED_MESSAGES          #
     ###################################
 
-    def disable_timed_messages(self):
+    def stop_timed_messages(self):
         """
         This method is for disabling the ability of class:Bot: to use timed messages.
         \nTo allow timed messages again, use "start_timed_messages".
@@ -534,16 +592,20 @@ class Bot():
         This method is to add a timed message to the class:Bot:.
         """
 
-        if self._timed_messages_enabled:
-            if inspect.isfunction(function) or inspect.ismethod(function):
-                if not self._check_for_timed_message(name, channel):
-                    self.timed_messages.append(TimedMessage(name, required_chats, channel, time, function))
-                else:
-                    self._call_event("on_error", TimedMessageError(None, f"Timed Message with name: \"{name}\" already exists for channel: \"{channel}\"."))
-            else:
-                self._call_event("on_error", TimedMessageError(None, "Function must be a function or a method (class function)."))
-        else:
+        if not self._timed_messages_enabled:
             self._call_event("on_error", TimedMessageError(None, "Timed Messages Disabled. Please use bot.start_timed_messages() to start it."))
+            return
+
+        if not inspect.isfunction(function) and not inspect.ismethod(function):
+            self._call_event("on_error", TimedMessageError(None, "Function must be a function or a method (class function)."))
+            return
+        
+        if self._check_for_timed_message(name, channel):
+            self._call_event("on_error", TimedMessageError(None, f"Timed Message with name: \"{name}\" already exists for channel: \"{channel}\"."))
+            return
+
+        self.timed_messages.append(TimedMessage(name, required_chats, channel, time, function))
+            
 
     def remove_timed_message(self, name, channel):
         """
@@ -701,7 +763,8 @@ class Bot():
         if ":tmi.twitch.tv CLEARCHAT #" in line:
             clearchat = self._read_clearchat(line)
             self._call_event("on_clearchat", clearchat)
-            self._call_event("on_ban", clearchat.to_ban())
+            if clearchat.user:
+                self._call_event("on_ban", clearchat.to_ban())
             return
 
         #CLEARMSG.
@@ -760,15 +823,10 @@ class Bot():
         return splitspace, params, message_data
 
     def _read_message(self, message):
-        #BITS EX -> @badges=subscriber/0;bits=100;color=#0000FF;display-name=Atomic_2k;emotes=;flags=;id=1aea1e31-adce-45f1-972d-20a45b5e18bf;mod=0;room-id=90020006;subscriber=1;tmi-sent-ts=1542937782028;turbo=0;user-id=161329917;user-type= :atomic_2k!atomic_2k@atomic_2k.tmi.twitch.tv PRIVMSG #tsm_viss :kappa100
         _, params, message_data = self._read_default(message)
         return Message(message_data[1].split("#")[1][:-1], message_data[1].split("!")[0], message_data[2], params), Info(message_data[1].split("#")[1][:-1], message_data[1].split("!")[0], message_data[2], params)
 
     def _read_usernotice(self, message):
-        #RESUB WITH MESSAGE -> @badges=subscriber/6;color=#36B319;display-name=DuckDuckLion;emotes=;flags=;id=efc65d23-12e8-4144-a419-b6fa50dab762;login=duckducklion;mod=0;msg-id=resub;msg-param-months=11;msg-param-sub-plan-name=Channel\sSubscription\s(vissgames);msg-param-sub-plan=1000;room-id=90020006;subscriber=1;system-msg=DuckDuckLion\sjust\ssubscribed\swith\sa\sTier\s1\ssub.\sDuckDuckLion\ssubscribed\sfor\s11\smonths\sin\sa\srow!;tmi-sent-ts=1542938148985;turbo=0;user-id=161337488;user-type= :tmi.twitch.tv USERNOTICE #tsm_viss :Black Friday was the first BR
-        #GIFT -> @badges=subscriber/12,premium/1;color=#0000FF;display-name=gamblebamble;emotes=;flags=;id=fb2994c2-765b-4077-b7d5-a3081b300424;login=gamblebamble;mod=0;msg-id=subgift;msg-param-months=1;msg-param-origin-id=b5\sc0\sba\s23\s7f\sd9\sf1\s05\sf9\se0\s62\sfb\s14\s20\s4e\s5c\s80\s9c\sf3\s1e;msg-param-recipient-display-name=KnifeWound;msg-param-recipient-id=160154219;msg-param-recipient-user-name=knifewound;msg-param-sender-count=100;msg-param-sub-plan-name=Channel\sSubscription\s(vissgames);msg-param-sub-plan=1000;room-id=90020006;subscriber=1;system-msg=gamblebamble\sgifted\sa\sTier\s1\ssub\sto\sKnifeWound!\sThey\shave\sgiven\s100\sGift\sSubs\sin\sthe\schannel!;tmi-sent-ts=1542938555193;turbo=0;user-id=95464062;user-type= :tmi.twitch.tv USERNOTICE #tsm_viss
-        #PRIME -> @badges=subscriber/0,turbo/1;color=#FF0000;display-name=xMAYZILLAx;emotes=;flags=;id=4f99520d-d07f-4250-9f59-a2e66aa7d811;login=xmayzillax;mod=0;msg-id=sub;msg-param-months=1;msg-param-sub-plan-name=Channel\sSubscription\s(vissgames);msg-param-sub-plan=Prime;room-id=90020006;subscriber=1;system-msg=xMAYZILLAx\sjust\ssubscribed\swith\sTwitch\sPrime!;tmi-sent-ts=1542938662653;turbo=1;user-id=189813901;user-type= :tmi.twitch.tv USERNOTICE #tsm_viss
-        #NORMAL SUB -> @badges=subscriber/0;color=#0000FF;display-name=DemNades;emotes=;flags=;id=2b4240c9-95f6-405f-b4f6-9e941336752e;login=demnades;mod=0;msg-id=sub;msg-param-months=1;msg-param-sub-plan-name=Channel\sSubscription\s(vissgames);msg-param-sub-plan=1000;room-id=90020006;subscriber=1;system-msg=DemNades\sjust\ssubscribed\swith\sa\sTier\s1\ssub!;tmi-sent-ts=1542939145123;turbo=0;user-id=55216234;user-type= :tmi.twitch.tv USERNOTICE #tsm_viss
         splitspace, params, message_data = self._read_default(message)
         channel = splitspace[1].split("#")[1]
         if " :" in channel:
@@ -779,26 +837,20 @@ class Bot():
         return UserNotice(params)
 
     def _read_userstate(self, message):
-        #EX -> @badges=;color=;display-name=JupiKD;emote-sets=0;mod=0;subscriber=0;user-type= :tmi.twitch.tv USERSTATE #dan_rll
         splitspace, params, _ = self._read_default(message)
         params["channel"] = splitspace[1].split("#")[1]
         return UserState(params)
 
     def _read_globaluserstate(self, message):
-        #EX -> @badges=staff/1;color=#0D4200;display-name=dallas;emote-sets=0,33,50,237,793,2126,3517,4578,5569,9400,10337,12239;turbo=0;user-id=1337;user-type=admin :tmi.twitch.tv GLOBALUSERSTATE
         _, params, _ = self._read_default(message)
         return GlobalUserState(params)
 
     def _read_roomstate(self, message):
-        #EX -> @broadcaster-lang=;emote-only=0;followers-only=-1;r9k=0;rituals=0;room-id=79095817;slow=0;subs-only=0 :tmi.twitch.tv ROOMSTATE #jups
-        #EX2 -> @room-id=79095817;subs-only=1 :tmi.twitch.tv ROOMSTATE #jups
         splitspace, params, _ = self._read_default(message)
         params["channel"] = splitspace[1].split("#")[1]
         return RoomState(params)
 
     def _read_join(self, message):
-        #CHANNEL -> :jupikd!jupikd@jupikd.tmi.twitch.tv JOIN #dan_rll
-        #CHATROOM -> :ronni!ronni@ronni.tmi.twitch.tv JOIN #chatrooms:44322889:04e762ec-ce8f-4cbc-b6a3-ffc871ab53da
         if "#chatrooms" in message:
             colons = message.split(":")
             return JoinChatRoom(colons[1].split("!")[0], colons[3], int(colons[2]))
@@ -806,26 +858,22 @@ class Bot():
             return JoinChannel(message.split("!")[0][1:], message.split("#")[1])
 
     def _read_part(self, message):
-        #EX -> :jupikd!jupikd@jupikd.tmi.twitch.tv PART #jups
         return PartChannel(message.split("!")[0][1:], message.split("#")[1])
 
     def _read_mode(self, message):
-        #EX -> :jtv MODE #jups +o jupikd
         right_split = message.split("#")[1].split(" ")
         return Mode(right_split[0], right_split[2], True if "+o" in right_split[1] else False)
 
     def _read_clearchat(self, message):
-        #EX -> @ban-reason=Follow\sthe\srules :tmi.twitch.tv CLEARCHAT #dallas :ronni
         _, params, message_data = self._read_default(message)
-        return ClearChat(message_data[1].split(" ")[2][1:], message_data[2], params)
+        user = message_data[2] if len(message_data) > 2 else None
+        return ClearChat(message_data[1].split(" ")[2][1:], user, params)
 
     def _read_clearmsg(self, message):
-        #EX -> @login=jups;target-msg-id=5c709d48-1122-4a1c-af61-d0b920372a66 :tmi.twitch.tv CLEARMSG #jups :yeet
         _, params, message_data = self._read_default(message)
         return ClearMsg(message_data[1].split(" ")[2][1:], message_data[2], params)
 
     def _read_notice(self, message):
-        #EX -> @msg-id=slow_off :tmi.twitch.tv NOTICE #chatrooms:44322889:04e762ec-ce8f-4cbc-b6a3-ffc871ab53da :This room is no longer in slow mode.
         _, params, message_data = self._read_default(message)
         if "#chatrooms:" in message:
             chatroom = message_data[3] if not " " in message_data[3] else message_data[3][:-1]
@@ -834,8 +882,6 @@ class Bot():
             return Notice(params["msg-id"], message_data[1].split(" ")[2][1:], None, message_data[2])
 
     def _read_hosttarget(self, message):
-        # Start -> :tmi.twitch.tv HOSTTARGET #hosting_channel <channel> [<number-of-viewers>]
-        # Stop -> :tmi.twitch.tv HOSTTARGET #hosting_channel :- [<number-of-viewers>]
         splitspace = message.split(" ")
         target = splitspace[3]
         if ":-" in target:
@@ -883,9 +929,9 @@ class Bot():
             cog_o = importlib.import_module(cog)
         except ModuleNotFoundError:
             if self._socket:
-                self._call_event("on_error", CogError(cog, f"An error occured when trying to import the cog."))
+                self._call_event("on_error", CogError(cog, f"An error occurred when trying to import the cog."))
             else:
-                warnings.warn(f"An error occured when importing cog: {cog}. This is a warning and not a class:Bot: error since it raised before \"run()\" was called.")
+                warnings.warn(f"An error occurred when importing cog: {cog}. This is a warning and not a class:Bot: error since it raised before \"run()\" was called.")
             return
 
         self.cogs.append(cog_o)
@@ -943,7 +989,7 @@ class Bot():
 
     def reload_cogs(self, cogs):
         """
-        This method is for reloading all cogs within the class:Bot:.
+        This method is for reloading multiple cogs within the class:Bot:.
         """
 
         for cog in cogs:
@@ -956,6 +1002,19 @@ class Bot():
         for member in members:
             if member[0] == "setup":
                 return True
+
+        return False
+    
+    def _check_taken_command(self, command):
+        if self.commands:
+            for c in self.commands:
+                if c.name == command.name or c.aliases and command.name in c.aliases:
+                    return True
+
+                if command.aliases:
+                    for alias in command.aliases:
+                        if alias == c.name or c.aliases and alias in c.aliases:
+                            return True
 
         return False
 
@@ -971,12 +1030,29 @@ class Bot():
         classmembers = inspect.getmembers(cclass.__class__, inspect.isfunction)
         for i in classmembers:
             # Check for command.
-            if "_decorators" in dir(i[1]) and "_cooldown" in dir(i[1]):
-                if i[1]._decorators == "command":
-                    self.commands.append(Command(len(self.commands), i[0], cclass, i[1], i[1]._cooldown))
-            elif "_decorators" in dir(i[1]) and not "_cooldown" in dir(i[1]):
-                if i[1]._decorators == "command":
-                    self.commands.append(Command(len(self.commands), i[0], cclass, i[1], None)) 
+            if not "_decorators" in dir(i[1]):
+                continue
+
+            if i[1]._decorators != "command":
+                continue
+
+            # Make the command object.
+            command_obj = Command(len(self.commands), i[0], cclass, i[1], None, None)
+
+            # Check if it has cooldown/aliases.
+            if "_cooldown" in dir(i[1]):
+                command_obj.cooldown = i[1]._cooldown
+
+            if "_aliases" in dir(i[1]):
+                command_obj.aliases = i[1]._aliases
+
+            # Check if name or aliases already taken.
+            if self._check_taken_command(command_obj):
+                warnings.warn(f"Command: {command_obj.name} was not added since there is another command that has the name or alias[es].")
+                return
+
+            # Add the command.
+            self.commands.append(command_obj)
 
     def _remove_commands(self, cog_name):
         removed = []
@@ -994,19 +1070,19 @@ class Bot():
     # Builtin command functions.
 
     def _define_builtin_commands(self):
-        #self._builtin_commands.append(Command(len(self.commands), "thonking", self, "_builtin_thonking", None))
+        # No builtins yet.
         pass
 
     def _check_builtin_command(self, command):
         for c in self._builtin_commands:
-            if c.name == command:
+            if c.name == command or c.aliases and command in c.aliases:
                 return True
     
         return False
 
     def _get_builtin_command(self, command):
         for c in self._builtin_commands:
-            if c.name == command:
+            if c.name == command or c.aliases and command in c.aliases:
                 return c
         
         return None
@@ -1032,7 +1108,7 @@ class Bot():
         """
 
         for c in self.commands:
-            if c.name == command:
+            if c.name == command or c.aliases and command in c.aliases:
                 return c
         
         return None
@@ -1043,15 +1119,45 @@ class Bot():
         """
 
         for c in self.commands:
-            if c.name == command:
+            if c.name == command or c.aliases and command in c.aliases:
                 return True
     
         return False
 
+    def silence_command(self, command):
+        """
+        This method is used to silence a command, stopping it from firing.
+        """
+
+        # Get the command.
+        command_obj = self.get_command(command)
+        if command_obj:
+            # Append to silenced_commands.
+            self.silenced_commands.append(command_obj.id)
+
+    def unsilence_command(self, command):
+        """
+        This method is used to remove the silence from a command, allowing it to fire.
+        """
+
+        # Get the command.
+        command_obj = self.get_command(command)
+        if command_obj:
+            # Remove from silenced_commands.
+            self.silenced_commands.remove(command_obj.id)
+
+    def _check_command_silenced(self, c_id):
+        for command in self.silenced_commands:
+            if command == c_id:
+                return True
+        
+        return False
+
     def _check_command_in_cooldown(self, c_id, channel):
         for cooldown in self.cooldowns:
-            if cooldown.command_id == c_id and cooldown.channel == channel:
-                return cooldown
+            if isinstance(cooldown, Cooldown):
+                if cooldown.command_id == c_id and cooldown.channel == channel:
+                    return cooldown
 
         return None
 
@@ -1060,26 +1166,50 @@ class Bot():
         if self._check_builtin_command(command) == True:
             command_o = self._get_builtin_command(command)
             cooldown_o = self._check_command_in_cooldown(command_o.id, info.channel)
-            if not cooldown_o:
-                getattr(self, command_o.function)(info, *args)
+            # Check for cooldown.
+            if cooldown_o:
+                self._call_event("on_error", CooldownError(command_o, info.user, info.channel, f"Command on cooldown, please wait {cooldown_o.time} seconds."))
+                return
+
+            # Check for silenced command.
+            if self._check_command_silenced(command_o.id):
+                self._call_event("on_error", SilencedError(command_o, info.user, info.channel, "Command has been silenced, so it cannot be run."))
+                return
+
+            # Run command.
+            getattr(self, command_o.function)(info, *args)
+            # Add cooldown.
+            if command_o.cooldown:
+                self._add_cooldown(command_o, info.channel)
+            # Call event for command fired.
+            self._call_event("command_fired", info, command_o)
+                
 
         # Actual commands from cogs.
         if self.check_command(command) == True:
             command_o = self.get_command(command)
             cooldown_o = self._check_command_in_cooldown(command_o.id, info.channel)
-            if not cooldown_o:
-                try:
-                    command_o.function(command_o.cog, info, *args) if args else command_o.function(command_o.cog, info)
-                except TypeError as e:
-                    self._call_event("on_error", CommandError(command_o, info.user, info.channel, f"Error running function -> TypeError: {e}"))
-                    return
-                # Add cooldown if command has it.
-                if command_o.cooldown:
-                    self._add_cooldown(command_o, info.channel)
-                # Call event for command_fired.
-                self._call_event("command_fired", info, command_o)
-            else:
+            # Check for cooldown.
+            if cooldown_o:
                 self._call_event("on_error", CooldownError(command_o, info.user, info.channel, f"Command on cooldown, please wait {cooldown_o.time} seconds."))
+                return
+
+            # Check for silenced command.
+            if self._check_command_silenced(command_o.id):
+                self._call_event("on_error", SilencedError(command_o, info.user, info.channel, "Command has been silenced, so it cannot be run."))
+                return
+
+            # Run command.
+            try:
+                command_o.function(command_o.cog, info, *args) if args else command_o.function(command_o.cog, info)
+            except TypeError as e:
+                self._call_event("on_error", CommandError(command_o, info.user, info.channel, f"Error running function -> TypeError: {e}"))
+                return
+            # Add cooldown if command has it.
+            if command_o.cooldown:
+                self._add_cooldown(command_o, info.channel)
+            # Call event for command_fired.
+            self._call_event("command_fired", info, command_o)
 
     def _add_cooldown(self, command, channel):
         self.cooldowns.append(Cooldown(command.id, channel, command.cooldown))
@@ -1089,9 +1219,9 @@ class Bot():
         """
         This is the built-in Twitch chat command for banning a user.
         \nEquivalent to:
-        \nbot.send_message(channel, f".ban {user} {reason}")
+        \nsend_message(channel, f".ban {user} {reason}")
         \nOr:
-        \nbot.send_message(channel, f".ban {user}")
+        \nsend_message(channel, f".ban {user}")
         """
 
         if reason:
@@ -1103,7 +1233,7 @@ class Bot():
         """
         This is the built-in Twitch chat command for unbanning a user.
         \nEquivalent to:
-        \nbot.send_message(channel, f".unban {user}")
+        \nsend_message(channel, f".unban {user}")
         """
 
         self.send_message(channel, f".unban {user}")
@@ -1112,7 +1242,7 @@ class Bot():
         """
         This is the built-in Twitch chat command for whispering a user.
         \nEquivalent to:
-        \nbot.send_message(channel, f".w {user} {message}")
+        \nsend_message(channel, f".w {user} {message}")
         """
 
         self.send_message(channel, f".w {user} {message}")
@@ -1121,7 +1251,7 @@ class Bot():
         """
         This is the built-in Twitch chat command for whispering a user.
         \nEquivalent to:
-        \nbot.send_message(channel, f".w {user} {message}")
+        \nsend_message(channel, f".w {user} {message}")
         """
 
         self.send_message(channel, f".w {user} {message}")
@@ -1130,7 +1260,7 @@ class Bot():
         """
         This is the built-in Twitch chat command for /me.
         \nEquivalent to:
-        \nbot.send_message(channel, f".me {message}")
+        \nsend_message(channel, f".me {message}")
         """
 
         self.send_message(channel, f".me {message}")
@@ -1140,7 +1270,7 @@ class Bot():
         This is the built-in Twitch chat command for changing the color of the bots chat color.
         \nNote, if you are having issues with this method, try writing /help color in a Twitch chat to get the specifics how this command works.
         \nEquivalent to:
-        \nbot.send_message(channel, f".color {color}")
+        \nsend_message(channel, f".color {color}")
         """
 
         colors = ["Blue", "BlueViolet", "CadetBlue", "Chocolate", "Coral", "DodgerBlue", "Firebrick", "GoldenRod", "Green", "HotPink", "OrangeRed", "Red", "SeaGreen", "SpringGreen", "YellowGreen"]
@@ -1153,9 +1283,9 @@ class Bot():
         """
         This is the built-in Twitch chat command for running a commercial.
         \nEquivalent to:
-        \nbot.send_message(channel, f".commercial {length}")
+        \nsend_message(channel, f".commercial {length}")
         \nOr:
-        \nbot.send_message(channel, ".commercial")
+        \nsend_message(channel, ".commercial")
         """
 
         if length and length.isdigit():
@@ -1167,9 +1297,9 @@ class Bot():
         """
         This is the built-in Twitch chat command for timing out a user.
         \nEquivalent to:
-        \nbot.send_message(channel, f".timeout {user} {length} {reason}")
+        \nsend_message(channel, f".timeout {user} {length} {reason}")
         \nOr:
-        \nbot.send_message(channel, f".timeout {user} {length}")
+        \nsend_message(channel, f".timeout {user} {length}")
         """
 
         if reason:
@@ -1181,18 +1311,18 @@ class Bot():
         """
         This is the built-in Twitch chat command for untiming out a user.
         \nEquivalent to:
-        \nbot.send_message(channel, f".untimeout {user}")
+        \nsend_message(channel, f".untimeout {user}")
         """
 
         self.send_message(channel, f".untimeout {user}")
 
     def slow(self, channel, amount = None):
         """
-        This is the built-in Twitch chat command for enabling slow mode for a chat.
+        This is the built-in Twitch chat command for enabling slow mode for a channel.
         \nEquivalent to:
-        \nbot.send_message(channel, f".slow {amount}")
+        \nsend_message(channel, f".slow {amount}")
         \nOr:
-        \nbot.send_message(channel, ".slow")
+        \nsend_message(channel, ".slow")
         """
         
         if amount:
@@ -1202,84 +1332,84 @@ class Bot():
 
     def slowoff(self, channel):
         """
-        This is the built-in Twitch chat command for disabling slow mode for a chat.
+        This is the built-in Twitch chat command for disabling slow mode for a channel.
         \nEquivalent to:
-        \nbot.send_message(channel, ".slowoff")
+        \nsend_message(channel, ".slowoff")
         """
 
         self.send_message(channel, ".slowoff")
 
     def r9kbeta(self, channel):
         """
-        This is the built-in Twitch chat command for enabling R9K mode for a chat.
+        This is the built-in Twitch chat command for enabling R9K mode for a channel.
         \nEquivalent to:
-        \nbot.send_message(channel, ".r9kbeta")
+        \nsend_message(channel, ".r9kbeta")
         """
 
         self.send_message(channel, ".r9kbeta")
 
     def r9kbetaoff(self, channel):
         """
-        This is the built-in Twitch chat command for disabling R9K mode for a chat.
+        This is the built-in Twitch chat command for disabling R9K mode for a channel.
         \nEquivalent to:
-        \nbot.send_message(channel, ".r9kbetaoff")
+        \nsend_message(channel, ".r9kbetaoff")
         """
 
         self.send_message(channel, ".r9kbetaoff")
 
     def emoteonly(self, channel):
         """
-        This is the built-in Twitch chat command for enabling emote-only mode for a chat.
+        This is the built-in Twitch chat command for enabling emote-only mode for a channel.
         \nEquivalent to:
-        \nbot.send_message(channel, ".emoteonly")
+        \nsend_message(channel, ".emoteonly")
         """
 
         self.send_message(channel, ".emoteonly")
 
     def emoteonlyoff(self, channel):
         """
-        This is the built-in Twitch chat command for disabling emote-only mode for a chat.
+        This is the built-in Twitch chat command for disabling emote-only mode for a channel.
         \nEquivalent to:
-        \nbot.send_message(channel, ".emoteonlyoff")
+        \nsend_message(channel, ".emoteonlyoff")
         """
 
         self.send_message(channel, ".emoteonlyoff")
 
     def clear(self, channel):
         """
-        This is the built-in Twitch chat command for clearing chat.
+        This is the built-in Twitch chat command for clearing chat in a channel.
         \nEquivalent to:
-        \nbot.send_message(channel, ".clear")
+        \nsend_message(channel, ".clear")
         """
 
         self.send_message(channel, ".clear")
 
     def subscribers(self, channel):
         """
-        This is the built-in Twitch chat command for enabling subscribers-only mode for a chat.
+        This is the built-in Twitch chat command for enabling subscribers-only mode for a channel.
         \nEquivalent to:
-        \nbot.send_message(channel, ".subscribers")
+        \nsend_message(channel, ".subscribers")
         """
 
         self.send_message(channel, ".subscribers")
 
     def subscribersoff(self, channel):
         """
-        This is the built-in Twitch chat command for disabling subscribers-only mode for a chat.
+        This is the built-in Twitch chat command for disabling subscribers-only mode for a channel.
         \nEquivalent to:
-        \nbot.send_message(channel, ".subscribersoff")
+        \nsend_message(channel, ".subscribersoff")
         """
 
         self.send_message(channel, ".subscribersoff")
 
     def followers(self, channel, duration = None):
         """
-        This is the built-in Twitch chat command for enabling followers-only mode for a chat.
+        This is the built-in Twitch chat command for enabling followers-only mode for a channel.
         \nNote: {duration} is the length a user must have been following for to be able to chat. Leaving it :None: will allow all followers to chat.
         \nEquivalent to:
-        \nbot.send_message(channel, f".followers {duration}")
+        \nsend_message(channel, f".followers {duration}")
         \nOr:
-        \nbot.send_message(channel, ".followers")
+        \nsend_message(channel, ".followers")
         """
 
         if duration:
@@ -1289,9 +1419,9 @@ class Bot():
 
     def followersoff(self, channel):
         """
-        This is the built-in Twitch chat command for disabling followers-only mode for a chat.
+        This is the built-in Twitch chat command for disabling followers-only mode for a channel.
         \nEquivalent to:
-        \nbot.send_message(channel, ".followersoff")
+        \nsend_message(channel, ".followersoff")
         """
 
         self.send_message(channel, ".followersoff")
@@ -1300,7 +1430,7 @@ class Bot():
         """
         This is an IRC command for removing a single message from chat.
         \nEquivalent to:
-        \nbot.send_message(channel, f".delete {message_id}")
+        \nsend_message(channel, f".delete {message_id}")
         """
 
         self.send_message(channel, f".delete {message_id}")

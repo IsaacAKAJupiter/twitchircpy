@@ -1,15 +1,15 @@
-class UserState:
+class UserState():
 
     """
     Class used for storing information sent from the USERSTATE command from the IRC.
     USERSTATE is the IRC command for when a user joins a channel or sends a message to a channel.
-    From testing, it's sporadic for when it sends. Assume it sends once per user.
-    Should not be manually created.
+    From testing, it is sporadic for when it sends. Assume it sends once per user.
+    Should not be manually created in most cases.
 
     Parameters
     ==========
     params -> :dict<str, str>:
-        A dictionary of parameters sent with the command.
+        A dictionary of parameters sent with the IRC command.
         Note, most parameters can be :None: as well as :str:.
         These parameters include:
             badges (chat badges and versions of each badge),
@@ -35,10 +35,11 @@ class UserState:
 class GlobalUserState(UserState):
 
     """
-    This class is the very similar to class:UserState: except with a different name, a few more parameters and sent from the GLOBALUSERSTATE command instead of USERSTATE.
+    This class is very similar to class:UserState: except with a few more parameters and sent from the GLOBALUSERSTATE command.
+    Subclass of class:UserState:.
     Not completely sure what this is used for, since I never received it during testing. Assume it is for Twitch staff/admins.
-    Note, channel will always be :None: and emotes will always be :None:.
-    Should not be manually created.
+    Note, channel and emotes will always be :None:.
+    Should not be manually created in most cases.
 
     New "params" Parameters
     =======================
@@ -49,7 +50,7 @@ class GlobalUserState(UserState):
     def __init__(self, params):
         super().__init__(params)
         self.emote_sets = params["emote-sets"] if "emote-sets" in params else None
-        self.user_id = params["user-id"] if "user-id" in params else None
+        self.user_id = int(params["user-id"]) if "user-id" in params else None
         self.channel = None
         self.emotes = None
 

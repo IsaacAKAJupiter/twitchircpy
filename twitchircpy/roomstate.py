@@ -4,34 +4,34 @@ class RoomState():
     Class used for storing information sent from the ROOMSTATE command from the IRC.
     Used for when a room setting is changed.
     Note, all parameters could be :None: since when testing, Twitch would not send some parameters occasionally.
-    Should not be manually created.
+    Should not be manually created in most cases.
     
     Parameters
     ==========
-    broadcaster_lang -> :str: | :None:
+    broadcaster_lang -> Optional[:str: | :None:]
         Chat language when broadcaster language mode is enabled.
-        Could be None if a language is not set.
+        Could be :None: if a language is not set.
         Examples: en (English) and fi (Finnish).
-    emote_only -> :int:
+    emote_only -> Optional[:int: | :None:]
         Whether or not emote-only chat is enabled.
-        Possible values: 0 (disabled) or 1 (enabled).
-    followers_only -> :int:
+        Possible values: 0 (disabled) and 1 (enabled).
+    followers_only -> Optional[:int: | :None:]
         Whether or not followers-only chat is enabled.
-        Possible values: -1 (disabled) or 0 (any followers).
+        Possible values: -1 (disabled) and 0 (any followers).
         Also could be a non-negative int, meaning users that
         have been following for at least the specific amount
         of minutes can chat.
-    r9k -> :int:
+    r9k -> Optional[:int: | :None:]
         Whether or not R9K mode is enabled.
-        Possible values: 0 (disabled) or 1 (enabled).
+        Possible values: 0 (disabled) and 1 (enabled).
         If enabled, messages with more than 9 characters must
         be unique.
-    slow -> :int:
+    slow -> Optional[:int: | :None:]
         Number of seconds chatters without moderator privileges
         have to wait between sending messages.
-    subs_only -> :int:
+    subs_only -> Optional[:int: | :None:]
         Whether or not subscribers-only chat is enabled.
-        Possible values: 0 (disabled) or 1 (enabled).
+        Possible values: 0 (disabled) and 1 (enabled).
     """
 
     def __init__(self, params):

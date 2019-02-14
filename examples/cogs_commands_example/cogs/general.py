@@ -10,7 +10,8 @@ class General():
 
     @bot.command # Create the command with the command function from the import at line 1.
     @bot.cooldown(5) # Add a cooldown to the command (in seconds).
-    def copy(self, info, *message): #Each command must include self and info for parameters. The rest are whatever the user sends in chat after the command.
+    @bot.aliases(["mock", "c"]) # Add aliases for the command. It will now work for !mock and !c.
+    def copy(self, info, *message): # Each command must include self and info for parameters. The rest are whatever the user sends in chat after the command.
         """Copies the user's message.""" # This is the docstring of the command. You can retrieve this through the description property of a command object.
         self.bot.send_message(info.channel, " ".join(message))
 

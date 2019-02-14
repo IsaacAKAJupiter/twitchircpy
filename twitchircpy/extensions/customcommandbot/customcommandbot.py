@@ -12,7 +12,7 @@ from .variable import Variable
 from .errors import ChatCommandError, VariableError
 from .cooldown import ChatCommandCooldown
 
-class CustomCommandBot(twitchircpy.bot.Bot):
+class Bot(twitchircpy.bot.Bot):
 
     """
     Class used as an additional layer of commands through Twitch chat.
@@ -49,14 +49,14 @@ class CustomCommandBot(twitchircpy.bot.Bot):
         super().__init__(oath, nick, prefix, channel, reconnect)
         self.chat_commands = []
         self.variables = []
-        self._chat_command_permissions = ["user", "moderator", "subscriber", "admin", "bits", "broadcaster", "global_mod", "staff", "turbo"]
+        self._chat_command_permissions = ["user", "moderator", "subscriber", "admin", "bits", "broadcaster", "global_mod", "staff", "turbo", "vip", "premium"]
 
         self._append_builtins()
         self._append_variables()
         self._append_events()
 
     def __repr__(self):
-        return f"CustomCommandBot(nick: {self.nick}, prefix: {self._prefix})"
+        return f"Bot(nick: {self.nick}, prefix: {self._prefix})"
 
     ###################################
     #            VARIABLES            #
@@ -161,12 +161,12 @@ class CustomCommandBot(twitchircpy.bot.Bot):
                 else:
                     continue
             except Exception as e:
-                self._call_event("on_error", VariableError(var.name, f"An error occured when running the variable's function. Raised: {e}"))
+                self._call_event("on_error", VariableError(var.name, f"An error occurred when running the variable's function. Raised: {e}"))
                 return None
 
             # Check if the user returned a non-string.
             if not isinstance(return_func, str):
-                self._call_event("on_error", VariableError(var.name, f"An error occured when running the variable's function. Raised: Function must return a string."))
+                self._call_event("on_error", VariableError(var.name, f"An error occurred when running the variable's function. Raised: Function must return a string."))
                 return None
 
             regex = r"{" + re.escape(var.name) + r".*?}"
@@ -185,18 +185,18 @@ class CustomCommandBot(twitchircpy.bot.Bot):
 
     def add_variable(self, name, function):
         """
-        This method is for adding a custom variable to the class:CustomCommandBot:.
+        This method is for adding a custom variable.
         Note, the function must return a str object.
         """
 
         if inspect.isfunction(function) and isinstance(name, str):
             self.variables.append(Variable(name, function))
         else:
-            self._call_event("on_error", VariableError(name, "An error occured when creating a variable. The name must be a string and the function must be a function."))
+            self._call_event("on_error", VariableError(name, "An error occurred when creating a variable. The name must be a string and the function must be a function."))
 
     def remove_variable(self, name):
         """
-        This method is for removing a custom variable to the class:CustomCommandBot: via name.
+        This method is for removing a custom variable via name.
         """
 
         unremovable_variables = ["user", "channel", "count", "timeuntil", "timesince"]
@@ -216,13 +216,13 @@ class CustomCommandBot(twitchircpy.bot.Bot):
         self.variables.append(Variable("timeuntil", self._timeuntil_variable))
         self.variables.append(Variable("timesince", self._timesince_variable))
 
-    def _user_variable(self, command, info):
+    def _user_variable(self, command, info, *params):
         return info.user
 
-    def _channel_variable(self, command, info):
+    def _channel_variable(self, command, info, *params):
         return info.channel
 
-    def _count_variable(self, command, info):
+    def _count_variable(self, command, info, *params):
         if not command.count:
             command.count = 1
         else:
@@ -288,7 +288,7 @@ class CustomCommandBot(twitchircpy.bot.Bot):
                     if formatted_response:
                         self.send_message(info.channel, formatted_response)
                         self._call_event("chatcommand_fired", info, command_o)
-                        self.cooldowns.append(ChatCommandCooldown(command_o.name, info.channel, command_o.cooldown))
+                        self.cooldowns.append(ChatCommandCooldown(command_o.name, command_o.aliases, info.channel, command_o.cooldown))
                 else:
                     self._call_event("on_error", ChatCommandError(command, info.user, info.channel, f"User does not have permission to use this command."))
             else:
@@ -296,14 +296,14 @@ class CustomCommandBot(twitchircpy.bot.Bot):
     
     def _check_chat_command(self, command, channel):
         for c in self.chat_commands:
-            if c.name == command and c.channel == channel:
+            if (c.name == command and c.channel == channel) or (c.aliases and command in c.aliases and c.channel == channel):
                 return True
 
         return False
 
     def _get_chat_command(self, command, channel):
         for c in self.chat_commands:
-            if c.name == command and c.channel == channel:
+            if (c.name == command and c.channel == channel) or (c.aliases and command in c.aliases and c.channel == channel):
                 return c
 
         return None
@@ -311,7 +311,7 @@ class CustomCommandBot(twitchircpy.bot.Bot):
     def _check_chat_command_cooldown(self, command, channel):
         for cooldown in self.cooldowns:
             if isinstance(cooldown, ChatCommandCooldown):
-                if cooldown.name == command and cooldown.channel == channel:
+                if (cooldown.name == command and cooldown.channel == channel) or (cooldown.aliases and command in cooldown.aliases and cooldown.channel == channel):
                     return cooldown
         
         return None
@@ -374,6 +374,7 @@ class CustomCommandBot(twitchircpy.bot.Bot):
         try:
             default_cooldown = 30
             default_permission = "user"
+            aliases = None
 
             response = list(response)
             
@@ -392,6 +393,12 @@ class CustomCommandBot(twitchircpy.bot.Bot):
                         return False, "Incorrect permission.", None
                     removed_params.append(param)
                     continue
+                # Check for aliases.
+                if param.startswith("--aliases="):
+                    aliases = param.split("=")[1]
+                    aliases = aliases.split(",")
+                    removed_params.append(param)
+                    continue
 
             # Remove all custom params.
             for param in removed_params:
@@ -403,9 +410,14 @@ class CustomCommandBot(twitchircpy.bot.Bot):
             if not permission:
                 permission = default_permission
 
+            if aliases:
+                for alias in aliases:
+                    if self._get_chat_command(alias, channel):
+                        return False, f"Alias for command already exists: {alias}", None
+
             response = " ".join(response)
 
-            chat_command = ChatCommand(command, channel, cooldown, permission, response, self._get_variables_from_message(response), count, timeuntil, timesince)
+            chat_command = ChatCommand(command, channel, cooldown, permission, response, self._get_variables_from_message(response), aliases, count, timeuntil, timesince)
             self.chat_commands.append(chat_command)
             if not edit:
                 self._call_event("chatcommand_created", chat_command)
@@ -424,19 +436,31 @@ class CustomCommandBot(twitchircpy.bot.Bot):
         return False, "Command not found."
 
     @bot.ismoderator
-    def _add_command(self, info, command, *response):
+    def _add_command(self, info, command = None, *response):
+        if not command:
+            self._call_event("on_error", ChatCommandError("addcommand", info.user, info.channel, "No command specified to add."))
+            return
+
         success, error, response = self._add_chat_command(info.channel, command, *response)
         if not success:
-            self._call_event("on_error", ChatCommandError("addcommand", info.user, info.channel, f"An error occured when creating the command: {command}. Raised: {error}"))
+            self._call_event("on_error", ChatCommandError("addcommand", info.user, info.channel, f"An error occurred when creating the command: {command}. Raised: {error}"))
 
     @bot.ismoderator
-    def _remove_command(self, info, command):
+    def _remove_command(self, info, command = None):
+        if not command:
+            self._call_event("on_error", ChatCommandError("removecommand", info.user, info.channel, "No command specified to remove."))
+            return
+
         success, error = self._remove_chat_command(info.channel, command)
         if not success:
-            self._call_event("on_error", ChatCommandError("removecommand", info.user, info.channel, f"An error occured when removing the command: {command}. Raised: {error}"))
+            self._call_event("on_error", ChatCommandError("removecommand", info.user, info.channel, f"An error occurred when removing the command: {command}. Raised: {error}"))
 
     @bot.ismoderator
-    def _edit_command(self, info, command, *response):
+    def _edit_command(self, info, command = None, *response):
+        if not command:
+            self._call_event("on_error", ChatCommandError("editcommand", info.user, info.channel, "No command specified to edit."))
+            return
+
         if self._check_chat_command(command, info.channel):
             old = self._get_chat_command(command, info.channel)
             success, response = self._edit_chat_command(info, command, *response)
@@ -444,7 +468,7 @@ class CustomCommandBot(twitchircpy.bot.Bot):
                 self._call_event("chatcommand_edited", old, self._get_chat_command(command, info.channel))
                 return True
 
-        self._call_event("on_error", ChatCommandError("editcommand", info.user, info.channel, f"An error occured when attempting to edit the command: {command}. Error: {response}"))
+        self._call_event("on_error", ChatCommandError("editcommand", info.user, info.channel, f"An error occurred when attempting to edit the command: {command}. Error: {response}"))
         return False
 
     def _edit_chat_command(self, info, command_name, *response):
@@ -472,9 +496,9 @@ class CustomCommandBot(twitchircpy.bot.Bot):
     ###################################
 
     def _append_builtins(self):
-        self._builtin_commands.append(twitchircpy.Command(len(self.commands), "addcommand", self, "_add_command", None))
-        self._builtin_commands.append(twitchircpy.Command(len(self.commands), "removecommand", self, "_remove_command", None))
-        self._builtin_commands.append(twitchircpy.Command(len(self.commands), "editcommand", self, "_edit_command", None))
+        self._builtin_commands.append(twitchircpy.Command(len(self.commands), "addcommand", self, "_add_command", None, ["addcom"]))
+        self._builtin_commands.append(twitchircpy.Command(len(self.commands), "removecommand", self, "_remove_command", None, ["delcom", "deletecom"]))
+        self._builtin_commands.append(twitchircpy.Command(len(self.commands), "editcommand", self, "_edit_command", None, ["editcom"]))
     
     def _append_events(self):
         events_len = len(self.events)

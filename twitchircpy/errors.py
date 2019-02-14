@@ -7,12 +7,11 @@ class CommandError():
     Parameters
     ==========
     command -> :Command:
-        This is the actual command object that errored.
+        This is the actual command object that raised an error.
     user -> :str:
-        The user that attempted to use the command when it errored.
-        This is the user's display name.
+        The user that attempted to use the command when it raised an error.
     channel -> :str:
-        The Twitch channel name that the error occured in.
+        The channel that the error occurred in.
     error -> :str:
         This is the actual error message.
     """
@@ -37,6 +36,34 @@ class CooldownError(CommandError):
     def __repr__(self):
         return f"CooldownError(command: {self.command}, user: {self.user}, channel: {self.channel}, error: {self.error})"
 
+class SilencedError():
+    
+    """
+    This class is used for storing information about errors dealing with silenced commands.
+    Usually occurs upon an attempt to run a command that was silenced.
+    Should not be manually created in most cases.
+
+    Parameters
+    ==========
+    command -> :Command:
+        The command object that was silenced.
+    user -> :str:
+        The user that attempted to fire the silenced command.
+    channel -> :str:
+        The channel that the command attempted to fire in.
+    error -> :str:
+        This is the actual error message.
+    """
+
+    def __init__(self, command, user, channel, error):
+        self.command = command
+        self.user = user
+        self.channel = channel
+        self.error = error
+
+    def __repr__(self):
+        return f"SilencedError(command: {self.command}, user: {self.user}, channel: {self.channel}, error: {self.error})"
+
 class DecoratorError():
 
     """
@@ -47,8 +74,8 @@ class DecoratorError():
     Parameters
     ==========
     function -> :function:
-        The function that errored.
-        Used to track the error that occured.
+        The function that raised an error.
+        Used to track the error that occurred.
     error -> :str:
         This is the actual error message.
     """
@@ -70,7 +97,7 @@ class CogError():
     Parameters
     ==========
     cog -> :str:
-        The name of the cog that errored.
+        The name of the cog that raised an error.
     error -> :str:
         This is the actual error message.
     """
@@ -93,7 +120,7 @@ class EventError():
     Parameters
     ==========
     event -> :str:
-        The name of the event that errored.
+        The name of the event that raised an error.
     error -> :str:
         This is the actual error message.
     """
@@ -115,8 +142,8 @@ class TimedMessageError():
     Parameters
     ==========
     timed_message -> :str: | :None:
-        The name of the timed_message that errored.
-        Could be None if an error occured upon creation.
+        The name of the timed_message that raised an error.
+        Could be :None: if an error occurred upon creation.
     error -> :str:
         This is the actual error message.
     """

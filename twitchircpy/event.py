@@ -1,9 +1,9 @@
 class Event():
 
     """
-    This class is used for storing information about Bot events.
+    This class is used for storing information about events.
     Used interally to bundle events efficiently.
-    Should not be manually created.
+    Should not be manually created in most cases.
     
     Parameters
     ==========

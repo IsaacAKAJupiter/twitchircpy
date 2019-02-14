@@ -2,14 +2,14 @@ class Cooldown():
 
     """
     Class for holding information about a command on cooldown.
-    Should not be manually created.
+    Should not be manually created in most cases.
 
     Parameters
     ==========
     command_id -> :int:
         This is the internal ID for the command on cooldown.
     channel -> :str:
-        The Twitch channel (name) the command entered cooldown in.
+        The channel that the command entered cooldown in.
         Used to enable cooldowns per channel for commands.
     time -> :int:
         The current cooldown, in seconds, the command has left.

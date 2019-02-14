@@ -2,19 +2,17 @@ class Mode():
 
     """
     Class used for storing information sent from the MODE command from the IRC.
-    Used for when a user loses gains/loses moderator status in a channel.
+    Used for when a user gains/loses moderator status in a channel.
     Note, usually sent in chunks and usually users who have been moderators for a while/lost it a while ago.
     Use for real-time moderation gain/loss knowing the above note.
-    Should not be manually created.
+    Should not be manually created in most cases.
     
     Parameters
     ==========
     channel -> :str:
-        The channel that the user gained/lost moderator status.
-        This is the channel's name/handle.
+        The channel that the user gained/lost moderator status in.
     user -> :str:
-        The user that gained/lost moderator status.
-        This is the user's name.
+        The user's name that gained/lost moderator status.
     gain -> :bool:
         Whether or not the user gained moderator status.
         True if gained, False if lost.

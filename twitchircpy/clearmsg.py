@@ -3,12 +3,12 @@ class ClearMsg():
     """
     Class used for storing information sent from the CLEARMSG command from the IRC.
     CLEARMSG is the IRC command for a single message being removed/cleared.
-    Should not be manually created.
+    Should not be manually created in most cases.
 
     Parameters
     ==========
     channel -> :str:
-        The Twitch channel name that CLEARMSG got sent to.
+        The channel that CLEARMSG got sent to.
     message -> :str:
         The message that got removed/cleared.
     params -> :dict<str, str>:

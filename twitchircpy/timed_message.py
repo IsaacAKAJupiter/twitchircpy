@@ -3,9 +3,9 @@ import time as ptime
 class TimedMessage():
 
     """
-    Class used for storing information about timed messages added to the class:Bot:.
-    Used for easily storing many timed messages within the class:Bot:.
-    Should not be manually created. Instead use the method: "add_timed_message" of class:Bot:.
+    Class used for storing information about timed messages.
+    Used for easily storing many timed messages.
+    Should not be manually created in most cases. Instead use the method: "add_timed_message" of class:Bot:.
     Raises TypeError for incorrect types on constructor (__init__). 
     
     Parameters
@@ -18,10 +18,10 @@ class TimedMessage():
         AKA this amount, or more, messages have to pass before
         the timed message will activate.
     channel -> :str:
-        The Twitch channel name that the timed message houses.
+        The channel that the timed message houses.
         Used for partial identification along with name.
     time -> :int:
-        The time to wait in between attempting to activate.
+        The time to wait between attempting to activate.
         This time will reset if required_chats not met.
     function -> :function:
         The function that the timed message fires upon activation.

@@ -5,20 +5,14 @@ class UserNotice():
     Used for notifying for subs, resubs, gifted subs, anonymous gifted subs, mystery gifted subs, raids, rituals and charity events.
     Charity is not in the documentation for Twitch IRC, not sure if it is for every charity event Twitch does.
     Worked for charity event occuring from December 12-27, 2018, with #charity cheering.
-    Should not be manually created.
+    Should not be manually created in most cases.
     
     Parameters
     ==========
     params -> :dict<str, str>:
         Holds every parameter that Twitch sends from USERNOTICE.
-        Note, most parameters can be :None: as well as :str:.
-        These parameters include, but not limited to, channel,
-        display_name (user that sent the notice),
-        message (ex: message sent from resub), 
-        msg_param_months (amount of months from sub),
-        msg_param_viewerCount (amount of viewers on raid),
-        msg_param_ritual_name (name of ritual notice is for),
-        msg_id (type of notice)
+        Note, most parameters can be :None:.
+        For more information, check out my wiki for this. https://github.com/IsaacAKAJupiter/twitchircpy/wiki/API-Reference#usernotice
     """
 
     def __init__(self, params):
@@ -30,28 +24,31 @@ class UserNotice():
         self.id = params["id"] if "id" in params else None
         self.login = params["login"] if "login" in params else None
         self.message = params["message"] if "message" in params else None
-        self.mod = params["mod"] if "mod" in params else None
+        self.mod = int(params["mod"]) if "mod" in params else None
         self.msg_id = params["msg-id"] if "msg-id" in params else None
+        self.msg_param_cumulative_months = int(params["msg-param-cumulative-months"]) if "msg-param-cumulative-months" in params else None
         self.msg_param_displayName = params["msg-param-displayName"] if "msg-param-displayName" in params else None
         self.msg_param_login = params["msg-param-login"] if "msg-param-login" in params else None
-        self.msg_param_months = params["msg-param-months"] if "msg-param-months" in params else None
+        self.msg_param_months = int(params["msg-param-months"]) if "msg-param-months" in params else None
         self.msg_param_recipient_display_name = params["msg-param-recipient-display-name"] if "msg-param-recipient-display-name" in params else None
-        self.msg_param_recipient_id = params["msg-param-recipient-id"] if "msg-param-recipient-id" in params else None
+        self.msg_param_recipient_id = int(params["msg-param-recipient-id"]) if "msg-param-recipient-id" in params and params["msg-param-recipient-id"] else None
         self.msg_param_recipient_user_name = params["msg-param-recipient-user-name"] if "msg-param-recipient-user-name" in params else None
+        self.msg_param_should_share_streak = int(params["msg-param-should-share-streak"]) if "msg-param-should-share-streak" in params else None
+        self.msg_param_streak_months = int(params["msg-param-streak-months"]) if "msg-param-streak-months" in params else None
         self.msg_param_sub_plan = params["msg-param-sub-plan"] if "msg-param-sub-plan" in params else None
         self.msg_param_sub_plan_name = params["msg-param-sub-plan-name"] if "msg-param-sub-plan-name" in params else None
-        self.msg_param_viewerCount = params["msg-param-viewerCount"] if "msg-param-viewerCount" in params else None
+        self.msg_param_viewerCount = int(params["msg-param-viewerCount"]) if "msg-param-viewerCount" in params and params["msg-param-viewerCount"] else None
         self.msg_param_ritual_name = params["msg-param-ritual-name"] if "msg-param-ritual-name" in params else None
-        self.room_id = params["room-id"] if "room-id" in params else None
+        self.room_id = int(params["room-id"]) if "room-id" in params else None
         self.system_msg = params["system-msg"] if "system-msg" in params else None
-        self.tmi_sent_ts = params["tmi-sent-ts"] if "tmi-sent-ts" in params else None
-        self.user_id = params["user-id"] if "user-id" in params else None
-        self.msg_param_charity_days_remaining = params["msg-param-charity-days-remaining"] if "msg-param-charity-days-remaining" in params else None
+        self.tmi_sent_ts = int(params["tmi-sent-ts"]) if "tmi-sent-ts" in params else None
+        self.user_id = int(params["user-id"]) if "user-id" in params else None
+        self.msg_param_charity_days_remaining = int(params["msg-param-charity-days-remaining"]) if "msg-param-charity-days-remaining" in params else None
         self.msg_param_charity_hashtag = params["msg-param-charity-hashtag"] if "msg-param-charity-hashtag" in params else None
-        self.msg_param_charity_hours_remaining = params["msg-param-charity-hours-remaining"] if "msg-param-charity-hours-remaining" in params else None
+        self.msg_param_charity_hours_remaining = int(params["msg-param-charity-hours-remaining"]) if "msg-param-charity-hours-remaining" in params else None
         self.msg_param_charity_learn_more = params["msg-param-charity-learn-more"] if "msg-param-charity-learn-more" in params else None
         self.msg_param_charity_name = params["msg-param-charity-name"] if "msg-param-charity-name" in params else None
-        self.msg_param_total = params["msg-param-total"] if "msg-param-total" in params else None
+        self.msg_param_total = float(params["msg-param-total"]) if "msg-param-total" in params else None
 
     def __repr__(self):
         return f"UserNotice(channel: {self.channel}, user: {self.display_name}, type: {self.msg_id})"

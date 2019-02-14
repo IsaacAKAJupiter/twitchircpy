@@ -7,9 +7,11 @@ class ChatCommandError():
     Parameters
     ==========
     command -> :str:
-        This is the name of the chat command.
+        Name of the chat command that raised an error.
+    user -> :str:
+        Name of the user that fired the chat command when it raised an error.
     channel -> :str:
-        The Twitch channel name that the error occured in.
+        The channel that the error occurred in.
     error -> :str:
         This is the actual error message.
     """
@@ -32,7 +34,7 @@ class VariableError():
     Parameters
     ==========
     variable -> :str:
-        This is the name of the variable.
+        Name of the variable that raised an error.
     error -> :str:
         This is the actual error message.
     """

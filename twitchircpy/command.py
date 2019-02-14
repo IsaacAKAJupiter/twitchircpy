@@ -2,7 +2,7 @@ class Command():
 
     """
     Class used for storing information about a command.
-    Should not be manually created.
+    Should not be manually created in most cases.
 
     Parameters
     ==========
@@ -17,20 +17,24 @@ class Command():
         The function object of the command.
         Used for calling the command.
     cooldown -> :int: | :None:
-        The cooldown amount for the command.
-        Can be None if there is no cooldown.
+        The cooldown amount for the command in seconds.
+        Can be :None: if there is no cooldown.
+    aliases -> Optional[:list<str>: | :None:]
+        List of aliases for the command.
+        Can be :None: if there are no aliases.
     """
 
-    def __init__(self, command_id, name, cog, function, cooldown):
+    def __init__(self, command_id, name, cog, function, cooldown, aliases=None):
         self.id = command_id
         self.name = name
         self.cog = cog
         self.function = function
         self.cooldown = cooldown
+        self.aliases = aliases
 
     @property
     def description(self):
         return self.function.__doc__
 
     def __repr__(self):
-        return f"Command(name: {self.name}, cog: {self.cog})"
+        return f"Command(name: {self.name}, aliases={self.aliases}, cog: {self.cog})"
