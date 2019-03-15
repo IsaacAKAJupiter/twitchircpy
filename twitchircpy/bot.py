@@ -675,9 +675,15 @@ class Bot():
         """
 
         event = self._get_event(func.__name__)
+        event_args = event.args
         if event:
             f_args = len(inspect.getargspec(func).args)
-            if f_args != event.args:
+
+            # Check if the function is a method. If it is add 1 to args since self has to be the first arg.
+            if inspect.ismethod(func):
+                event_args += 1
+
+            if f_args != event_args:
                 warnings.warn(f"Event \"{event.name}\" does not have correct number of parameters. {event.args} needed; {f_args} given.")
                 return
             self._callbacks[func.__name__] = func
