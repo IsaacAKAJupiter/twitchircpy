@@ -3,7 +3,7 @@ import twitchircpy
 """Example of how to use commands. Take a look at the files within cogs directory for more information."""
 
 bot = twitchircpy.Bot("oauth", "nick", "!", "jups", True)
-cogs = ["cogs.general", "cogs.admin"]   # Gets each cog from the cogs directory.
+cogs = ["cogs.general", "cogs.mod"]   # Gets each cog from the cogs directory.
 bot.add_cogs(cogs) # Add the cogs and initialize the commands.
                    # Commands are handled internally, no other necessary initialization.
 
