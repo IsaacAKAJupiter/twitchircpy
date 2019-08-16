@@ -4,7 +4,7 @@ class HostTarget():
     Class used for storing information sent from the HOSTTARGET command from the IRC.
     Used for when a channel starts or stops host mode.
     Should not be manually created in most cases.
-    
+
     Parameters
     ==========
     target -> :str:
@@ -16,7 +16,7 @@ class HostTarget():
         Can be :None: if not sent.
     """
 
-    def __init__(self, target, channel, viewers = None):
+    def __init__(self, target, channel, viewers=None):
         self.target = target
         self.channel = channel
         self.viewers = viewers

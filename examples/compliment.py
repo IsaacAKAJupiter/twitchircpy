@@ -5,17 +5,22 @@ import random
 
 bot = twitchircpy.Bot("oauth", "nick", "!", "jups", True)
 
-chatters = [] # Since you cannot get a list of all the viewers with the Twitch IRC, we're going to create it ourselves.
-compliments = ["you look great today!", "I like your username!", "you're a smart cookie.", "I appreciate you", "you deserve a hug right now."]
+# Since you cannot get a list of all the viewers with the Twitch IRC, we're going to create it ourselves.
+chatters = []
+compliments = ["you look great today!", "I like your username!",
+               "you're a smart cookie.", "I appreciate you", "you deserve a hug right now."]
 
-@bot.event # Takes the bot object created at line 4 and hooks to an event.
-def on_connect(): # Fires when the bot has connected to all of the given channels.
+
+@bot.event  # Takes the bot object created at line 4 and hooks to an event.
+def on_connect():  # Fires when the bot has connected to all of the given channels.
     print("Compliment bot connected.")
     print(f"nickname: {bot.nick}")
     print(f"channels connected to: {bot.channels}")
 
+
 @bot.event
-def on_message(message): # Fires when a message is sent to any of the connected channels.
+# Fires when a message is sent to any of the connected channels.
+def on_message(message):
     if not message.user in chatters:
         chatters.append(message.user)
 
@@ -25,4 +30,5 @@ def on_message(message): # Fires when a message is sent to any of the connected 
             compliment = compliments[random.randint(0, len(compliments) - 1)]
             bot.send_message(message.channel, f"@{chatter}, {compliment}")
 
-bot.start() # Start the bot AFTER defining all events.
+
+bot.start()  # Start the bot AFTER defining all events.

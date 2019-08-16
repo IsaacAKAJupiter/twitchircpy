@@ -5,7 +5,7 @@ class JoinChatRoom():
     Similar to class:JoinChannel:, except with chat rooms.
     Note, usually sent in chunks.
     Should not be manually created in most cases.
-    
+
     Parameters
     ==========
     user -> :str:

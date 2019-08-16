@@ -24,13 +24,14 @@ class Command():
         Can be :None: if there are no aliases.
     """
 
-    def __init__(self, command_id, name, cog, function, cooldown, aliases=None):
+    def __init__(self, command_id, name, cog, function, cooldown, aliases=None, last_used=None):
         self.id = command_id
         self.name = name
         self.cog = cog
         self.function = function
         self.cooldown = cooldown
         self.aliases = aliases
+        self.last_used = last_used
 
     @property
     def description(self):

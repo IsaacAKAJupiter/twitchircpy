@@ -36,7 +36,7 @@ class ChatCommand():
         Can be :None: if no datetime specified.
     """
 
-    def __init__(self, name, channel, cooldown, permission, response, variables, aliases=None, count = None, timeuntil = None, timesince = None):
+    def __init__(self, name, channel, cooldown, permission, response, variables, aliases=None, count=None, timeuntil=None, timesince=None):
         self.name = name
         self.response = response
         self.channel = channel

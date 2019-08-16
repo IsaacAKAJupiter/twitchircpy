@@ -6,7 +6,7 @@ A wrapper for the Twitch IRC used for creating chat bots.
 
 __title__ = "twitchircpy"
 __author__ = "Isaac"
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 __license__ = "GNU General Public License v3.0"
 
 from .bot import Bot

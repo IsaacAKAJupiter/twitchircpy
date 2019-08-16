@@ -5,7 +5,7 @@ class Notice():
     Used for general notices from Twitch.
     Example: A channel's chat goes into slow mode.
     Should not be manually created in most cases.
-    
+
     Parameters
     ==========
     msg_id -> :str:

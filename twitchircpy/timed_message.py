@@ -1,5 +1,6 @@
 import time as ptime
 
+
 class TimedMessage():
 
     """
@@ -7,7 +8,7 @@ class TimedMessage():
     Used for easily storing many timed messages.
     Should not be manually created in most cases. Instead use the method: "add_timed_message" of class:Bot:.
     Raises TypeError for incorrect types on constructor (__init__). 
-    
+
     Parameters
     ==========
     name -> :str:
@@ -29,9 +30,11 @@ class TimedMessage():
 
     def __init__(self, name, required_chats, channel, time, function):
         if type(required_chats) != int or required_chats <= 0:
-            raise TypeError("required_chats has to be a positive integer which is also greater than 0.")
+            raise TypeError(
+                "required_chats has to be a positive integer which is also greater than 0.")
         if type(time) != int or time <= 0:
-            raise TypeError("time has to be a positive integer which is also greater than 0.")
+            raise TypeError(
+                "time has to be a positive integer which is also greater than 0.")
 
         self.name = name
         self.required_chats = required_chats

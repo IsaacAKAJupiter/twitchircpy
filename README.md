@@ -1,11 +1,12 @@
 # twitchircpy
+
 [![PyPI](https://img.shields.io/pypi/v/twitchircpy.svg)](https://pypi.python.org/pypi/twitchircpy/)
 [![PyPI](https://img.shields.io/pypi/pyversions/twitchircpy.svg)](https://pypi.python.org/pypi/twitchircpy/)
 
 twitchircpy is a wrapper for the Twitch IRC used for creating chat bots.
 
 ## Installing
-  
+
 Installing from PyPI:
 
 ```
@@ -39,12 +40,12 @@ bot = twitchircpy.Bot("oauth", "nick", "!", "jups", True)
 @bot.event
 def on_connect():
     print("Connected!")
-    
+
 @bot.event
 def on_message(message):
     if "HeyGuys" in message.content:
         bot.send_message(message.channel, f"@{message.user} HeyGuys")
-        
+
 @bot.event
 def on_sub(sub):
     bot.send_message(sub.channel, f"Thank you @{sub.login} for subbing!")
@@ -64,4 +65,4 @@ Tested with Python 3.7
 
 ## Discord
 
-Please join the [Discord](https://discord.gg/yxzp7JU "https://discord.gg/yxzp7JU") if you need help with the library or just want to chat!
+Please join the [Discord](https://discord.gg/yxzp7JU 'https://discord.gg/yxzp7JU') if you need help with the library or just want to chat!

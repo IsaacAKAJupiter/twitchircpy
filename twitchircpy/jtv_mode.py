@@ -6,7 +6,7 @@ class Mode():
     Note, usually sent in chunks and usually users who have been moderators for a while/lost it a while ago.
     Use for real-time moderation gain/loss knowing the above note.
     Should not be manually created in most cases.
-    
+
     Parameters
     ==========
     channel -> :str:
@@ -22,6 +22,6 @@ class Mode():
         self.channel = channel
         self.user = user
         self.gain = gain
-    
+
     def __repr__(self):
         return f"Mode(channel: {self.channel}, user: {self.user}, gain: {self.gain})"

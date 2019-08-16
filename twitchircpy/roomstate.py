@@ -5,7 +5,7 @@ class RoomState():
     Used for when a room setting is changed.
     Note, all parameters could be :None: since when testing, Twitch would not send some parameters occasionally.
     Should not be manually created in most cases.
-    
+
     Parameters
     ==========
     broadcaster_lang -> Optional[:str: | :None:]
@@ -36,11 +36,14 @@ class RoomState():
 
     def __init__(self, params):
         self.broadcaster_lang = params["broadcaster-lang"] if "broadcaster-lang" in params else None
-        self.emote_only = int(params["emote-only"]) if "emote-only" in params else None
-        self.followers_only = int(params["followers-only"]) if "followers-only" in params else None
+        self.emote_only = int(params["emote-only"]
+                              ) if "emote-only" in params else None
+        self.followers_only = int(
+            params["followers-only"]) if "followers-only" in params else None
         self.r9k = int(params["r9k"]) if "r9k" in params else None
         self.slow = int(params["slow"]) if "slow" in params else None
-        self.subs_only = int(params["subs-only"]) if "subs-only" in params else None
+        self.subs_only = int(params["subs-only"]
+                             ) if "subs-only" in params else None
         self.channel = params["channel"] if "channel" in params else None
 
     def __repr__(self):

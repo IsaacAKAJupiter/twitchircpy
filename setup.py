@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="twitchircpy",
-    version="1.0.4",
+    version="1.0.5",
     author="IsaacAKAJupiter",
     description="A wrapper for the Twitch IRC used for creating chat bots.",
     long_description=long_description,

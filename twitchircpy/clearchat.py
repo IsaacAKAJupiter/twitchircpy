@@ -23,20 +23,23 @@ class ClearChat():
             tmi_sent_ts (Unix time (Epoch time) that the chat got cleared)
     """
 
-    def __init__(self, channel, user = None, params = None):
+    def __init__(self, channel, user=None, params=None):
         self.channel = channel
         self.user = user
-        self.ban_duration = int(params["ban-duration"]) if "ban-duration" in params else "Permanent" if self.user else None
+        self.ban_duration = int(
+            params["ban-duration"]) if "ban-duration" in params else "Permanent" if self.user else None
         self.ban_reason = params["ban-reason"] if "ban-reason" in params else None
         self.room_id = int(params["room-id"]) if "room-id" in params else None
         self.target_msg_id = params["target-msg-id"] if "target-msg-id" in params else None
-        self.tmi_sent_ts = int(params["tmi-sent-ts"]) if "tmi-sent-ts" in params else None
+        self.tmi_sent_ts = int(
+            params["tmi-sent-ts"]) if "tmi-sent-ts" in params else None
 
     def __repr__(self):
         return f"ClearChat(channel: {self.channel}, user: {self.user}, duration: {self.ban_duration}, reason: {self.ban_reason})"
 
     def to_ban(self):
         return Ban(self.channel, self.user, [self.ban_duration, self.ban_reason])
+
 
 class Ban(ClearChat):
 

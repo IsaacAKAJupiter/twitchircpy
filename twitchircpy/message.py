@@ -4,7 +4,7 @@ class Message():
     Class used for storing information sent from the PRIVMSG command from the IRC.
     Created for ease of use for the user.
     Should not be manually created in most cases.
-    
+
     Parameters
     ==========
     channel -> :str:
@@ -31,12 +31,14 @@ class Message():
         self.id = params["id"] if "id" in params else None
         self.mod = int(params["mod"]) if "mod" in params else None
         self.room_id = int(params["room-id"]) if "room-id" in params else None
-        self.tmi_sent_ts = int(params["tmi-sent-ts"]) if "tmi-sent-ts" in params else None
+        self.tmi_sent_ts = int(
+            params["tmi-sent-ts"]) if "tmi-sent-ts" in params else None
         self.user_id = int(params["user-id"]) if "user-id" in params else None
         self.has_me = params["has_me"]
 
     def __repr__(self):
         return f"Message(channel: {self.channel}, user: {self.user}, content: {self.content})"
+
 
 class Info(Message):
 

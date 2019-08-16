@@ -5,7 +5,7 @@ class PartChannel():
     Used for when a user parts a channel.
     Note, usually sent in chunks.
     Should not be manually created in most cases.
-    
+
     Parameters
     ==========
     user -> :str:

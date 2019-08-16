@@ -5,7 +5,7 @@ class JoinChannel():
     Used for when a user joins a channel.
     Note, usually sent in chunks.
     Should not be manually created in most cases.
-    
+
     Parameters
     ==========
     user -> :str:

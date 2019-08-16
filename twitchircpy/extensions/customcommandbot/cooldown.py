@@ -1,5 +1,6 @@
 import twitchircpy
 
+
 class ChatCommandCooldown(twitchircpy.Cooldown):
 
     """

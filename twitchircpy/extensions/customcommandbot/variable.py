@@ -19,8 +19,9 @@ class Variable():
     def __repr__(self):
         return f"Variable(name: {self.name}, function: {self.function})"
 
-    def to_dynamic(self, params = None):
+    def to_dynamic(self, params=None):
         return DynamicVariable(self.name, self.function, params)
+
 
 class DynamicVariable(Variable):
 
@@ -35,7 +36,7 @@ class DynamicVariable(Variable):
         List of parameters for the variable in the chat command.
     """
 
-    def __init__(self, name, function, params = None):
+    def __init__(self, name, function, params=None):
         super().__init__(name, function)
         self.params = params
 

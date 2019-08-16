@@ -3,7 +3,7 @@ class CommandError():
     """
     This class is used for storing information about errors dealing with commands.
     Should not be manually created in most cases.
-    
+
     Parameters
     ==========
     command -> :Command:
@@ -25,6 +25,7 @@ class CommandError():
     def __repr__(self):
         return f"CommandError(command: {self.command}, user: {self.user}, channel: {self.channel}, error: {self.error})"
 
+
 class CooldownError(CommandError):
 
     """
@@ -36,8 +37,9 @@ class CooldownError(CommandError):
     def __repr__(self):
         return f"CooldownError(command: {self.command}, user: {self.user}, channel: {self.channel}, error: {self.error})"
 
+
 class SilencedError():
-    
+
     """
     This class is used for storing information about errors dealing with silenced commands.
     Usually occurs upon an attempt to run a command that was silenced.
@@ -64,13 +66,14 @@ class SilencedError():
     def __repr__(self):
         return f"SilencedError(command: {self.command}, user: {self.user}, channel: {self.channel}, error: {self.error})"
 
+
 class DecoratorError():
 
     """
     This class is used for storing information about errors dealing with decorators.
     Usually occurs upon using the "@bot.check()" decorator with custom checks.
     Should not be manually created in most cases.
-    
+
     Parameters
     ==========
     function -> :function:
@@ -87,13 +90,14 @@ class DecoratorError():
     def __repr__(self):
         return f"DecoratorError(function: {self.function}, error: {self.error})"
 
+
 class CogError():
 
     """
     This class is used for storing information about errors dealing with cogs.
     Usually occurs upon creating/adding cogs.
     Should not be manually created in most cases.
-    
+
     Parameters
     ==========
     cog -> :str:
@@ -109,6 +113,7 @@ class CogError():
     def __repr__(self):
         return f"CogError(cog: {self.cog}, error: {self.error})"
 
+
 class EventError():
 
     """
@@ -116,7 +121,7 @@ class EventError():
     Usually occurs upon using an event incorrectly.
     Note, this does not fire upon attempting to use an event that does not exist. Instead, a warning is sent.
     Should not be manually created in most cases.
-    
+
     Parameters
     ==========
     event -> :str:
@@ -132,13 +137,14 @@ class EventError():
     def __repr__(self):
         return f"EventError(event: {self.event}, error: {self.error})"
 
+
 class TimedMessageError():
 
     """
     This class is used for storing information about errors dealing with timed messages.
     Usually occurs upon function failure when firing a timed message.
     Should not be manually created in most cases.
-    
+
     Parameters
     ==========
     timed_message -> :str: | :None:
@@ -155,13 +161,14 @@ class TimedMessageError():
     def __repr__(self):
         return f"TimedMessageError(timed_message: {self.timed_message}, error: {self.error})"
 
+
 class CommonError():
 
     """
     This class is used for storing information about non-specified errors.
     Usually occurs upon using Twitch chat commands, like ".color".
     Should not be manually created in most cases.
-    
+
     Parameters
     ==========
     error -> :str:
@@ -170,6 +177,6 @@ class CommonError():
 
     def __init__(self, error):
         self.error = error
-    
+
     def __repr__(self):
         return f"CommonError(error: {self.error})"

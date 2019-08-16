@@ -7,6 +7,7 @@ import sys
 import re
 import time
 import signal
+import datetime
 from functools import wraps
 
 from .command import Command
@@ -31,6 +32,7 @@ from .timed_message import TimedMessage
 #            DECORATORS           #
 ###################################
 
+
 def command(func):
     """
     This decorator is for marking specific functions as a command.
@@ -38,6 +40,7 @@ def command(func):
 
     func._decorators = "command"
     return func
+
 
 def cooldown(time):
     """
@@ -48,9 +51,13 @@ def cooldown(time):
         if not isinstance(time, int):
             warnings.warn("Cooldown must be an int.")
             return
+        if time > 86400:
+            warnings.warn("Cooldown must be less than 86400.")
+            return
         func._cooldown = time
         return func
     return _dec_cooldown
+
 
 def aliases(a):
     """
@@ -64,6 +71,7 @@ def aliases(a):
         func._aliases = a
         return func
     return _dec_aliases
+
 
 def ismoderator(func):
     """
@@ -79,11 +87,14 @@ def ismoderator(func):
         if len(args) > 1:
             if inspect.isclass(type(args[0])):
                 if not isinstance(args[0], Bot):
-                    args[0].bot._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not a mod. Command used: {func.__name__}"))
+                    args[0].bot._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not a mod. Command used: {func.__name__}"))
                 else:
-                    args[0]._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not a mod. Command used: {func.__name__}"))
+                    args[0]._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not a mod. Command used: {func.__name__}"))
             return
     return _dec_ismod
+
 
 def issubscriber(func):
     """
@@ -95,7 +106,8 @@ def issubscriber(func):
         if len(args) > 1:
             if isinstance(args[1], Info):
                 try:
-                    badges = dict(item.split("/") for item in args[1].badges.split(","))
+                    badges = dict(item.split("/")
+                                  for item in args[1].badges.split(","))
                 except ValueError:
                     pass
                 else:
@@ -104,11 +116,14 @@ def issubscriber(func):
         if len(args) > 1:
             if inspect.isclass(type(args[0])):
                 if not isinstance(args[0], Bot):
-                    args[0].bot._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not a subscriber. Command used: {func.__name__}"))
+                    args[0].bot._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not a subscriber. Command used: {func.__name__}"))
                 else:
-                    args[0]._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not a subscriber. Command used: {func.__name__}"))
+                    args[0]._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not a subscriber. Command used: {func.__name__}"))
             return
     return _dec_issub
+
 
 def isbroadcaster(func):
     """
@@ -124,17 +139,20 @@ def isbroadcaster(func):
         if len(args) > 1:
             if inspect.isclass(type(args[0])):
                 if not isinstance(args[0], Bot):
-                    args[0].bot._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not the broadcaster. Command used: {func.__name__}"))
+                    args[0].bot._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not the broadcaster. Command used: {func.__name__}"))
                 else:
-                    args[0]._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not the broadcaster. Command used: {func.__name__}"))
+                    args[0]._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not the broadcaster. Command used: {func.__name__}"))
             return
     return _dec_isbroadcaster
+
 
 def isbits(func):
     """
     This decorator is for allowing only users that cheer within the command (and the broadcaster) to use the specific command.
     """
-    
+
     @wraps(func)
     def _dec_isbits(*args, **kwargs):
         if len(args) > 1:
@@ -144,12 +162,15 @@ def isbits(func):
         if len(args) > 1:
             if inspect.isclass(type(args[0])):
                 if not isinstance(args[0], Bot):
-                    args[0].bot._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} did not include bits. Command used: {func.__name__}"))
+                    args[0].bot._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} did not include bits. Command used: {func.__name__}"))
                 else:
-                    args[0]._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} did not include bits. Command used: {func.__name__}"))
+                    args[0]._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} did not include bits. Command used: {func.__name__}"))
             return
     return _dec_isbits
-    
+
+
 def isadmin(func):
     """
     This decorator is for allowing only admins (and the broadcaster) to use the specific command.
@@ -164,17 +185,20 @@ def isadmin(func):
         if len(args) > 1:
             if inspect.isclass(type(args[0])):
                 if not isinstance(args[0], Bot):
-                    args[0].bot._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not an admin. Command used: {func.__name__}"))
+                    args[0].bot._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not an admin. Command used: {func.__name__}"))
                 else:
-                    args[0]._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not an admin. Command used: {func.__name__}"))
+                    args[0]._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not an admin. Command used: {func.__name__}"))
             return
     return _dec_isadmin
+
 
 def isglobalmod(func):
     """
     This decorator is for allowing only global moderators (and the broadcaster) to use the specific command.
     """
-    
+
     @wraps(func)
     def _dec_isglobalmod(*args, **kwargs):
         if len(args) > 1:
@@ -184,11 +208,14 @@ def isglobalmod(func):
         if len(args) > 1:
             if inspect.isclass(type(args[0])):
                 if not isinstance(args[0], Bot):
-                    args[0].bot._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not a global mod. Command used: {func.__name__}"))
+                    args[0].bot._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not a global mod. Command used: {func.__name__}"))
                 else:
-                    args[0]._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not a global mod. Command used: {func.__name__}"))
+                    args[0]._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not a global mod. Command used: {func.__name__}"))
             return
     return _dec_isglobalmod
+
 
 def isstaff(func):
     """
@@ -204,11 +231,14 @@ def isstaff(func):
         if len(args) > 1:
             if inspect.isclass(type(args[0])):
                 if not isinstance(args[0], Bot):
-                    args[0].bot._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not a staff member. Command used: {func.__name__}"))
+                    args[0].bot._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not a staff member. Command used: {func.__name__}"))
                 else:
-                    args[0]._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not a staff member. Command used: {func.__name__}"))
+                    args[0]._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not a staff member. Command used: {func.__name__}"))
             return
     return _dec_isstaff
+
 
 def isturbo(func):
     """
@@ -225,11 +255,14 @@ def isturbo(func):
         if len(args) > 1:
             if inspect.isclass(type(args[0])):
                 if not isinstance(args[0], Bot):
-                    args[0].bot._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not turbo. Command used: {func.__name__}"))
+                    args[0].bot._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not turbo. Command used: {func.__name__}"))
                 else:
-                    args[0]._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not turbo. Command used: {func.__name__}"))
+                    args[0]._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not turbo. Command used: {func.__name__}"))
             return
     return _dec_isturbo
+
 
 def isvip(func):
     """
@@ -245,11 +278,14 @@ def isvip(func):
         if len(args) > 1:
             if inspect.isclass(type(args[0])):
                 if not isinstance(args[0], Bot):
-                    args[0].bot._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not VIP. Command used: {func.__name__}"))
+                    args[0].bot._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not VIP. Command used: {func.__name__}"))
                 else:
-                    args[0]._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not VIP. Command used: {func.__name__}"))
+                    args[0]._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not VIP. Command used: {func.__name__}"))
             return
     return _dec_isvip
+
 
 def ispremium(func):
     """
@@ -265,11 +301,14 @@ def ispremium(func):
         if len(args) > 1:
             if inspect.isclass(type(args[0])):
                 if not isinstance(args[0], Bot):
-                    args[0].bot._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not premium. Command used: {func.__name__}"))
+                    args[0].bot._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not premium. Command used: {func.__name__}"))
                 else:
-                    args[0]._call_event("on_error", DecoratorError(func, f"Command check failed, {args[1].display_name} was not premium. Command used: {func.__name__}"))
+                    args[0]._call_event("on_error", DecoratorError(
+                        func, f"Command check failed, {args[1].display_name} was not premium. Command used: {func.__name__}"))
             return
     return _dec_ispremium
+
 
 def check(check_func):
     """
@@ -285,38 +324,47 @@ def check(check_func):
             if not inspect.isfunction(check_func):
                 if len(args) > 1 and inspect.isclass(type(args[0])):
                     if not isinstance(args[0], Bot):
-                        args[0].bot._call_event("on_error", DecoratorError(func, f"@bot.check() has to have a function as a parameter."))
+                        args[0].bot._call_event("on_error", DecoratorError(
+                            func, f"@bot.check() has to have a function as a parameter."))
                     else:
-                        args[0]._call_event("on_error", DecoratorError(func, f"@bot.check() has to have a function as a parameter."))
+                        args[0]._call_event("on_error", DecoratorError(
+                            func, f"@bot.check() has to have a function as a parameter."))
                 return
             try:
                 func_val = check_func(*args, **kwargs)
             except Exception as e:
                 if len(args) > 1 and inspect.isclass(type(args[0])):
                     if not isinstance(args[0], Bot):
-                        args[0].bot._call_event("on_error", DecoratorError(func, f"@bot.check() tried to call the function: {check_func.__name__} but the function raised this exception: {e}."))
+                        args[0].bot._call_event("on_error", DecoratorError(
+                            func, f"@bot.check() tried to call the function: {check_func.__name__} but the function raised this exception: {e}."))
                     else:
-                        args[0]._call_event("on_error", DecoratorError(func, f"@bot.check() tried to call the function: {check_func.__name__} but the function raised this exception: {e}."))
+                        args[0]._call_event("on_error", DecoratorError(
+                            func, f"@bot.check() tried to call the function: {check_func.__name__} but the function raised this exception: {e}."))
                 return
             else:
                 if func_val is False:
                     if len(args) > 1 and inspect.isclass(type(args[0])):
                         if not isinstance(args[0], Bot):
-                            args[0].bot._call_event("on_error", DecoratorError(func, f"Command check failed. User {args[1].display_name} failed the check: {check_func.__name__}. Command used: {func.__name__}"))
+                            args[0].bot._call_event("on_error", DecoratorError(
+                                func, f"Command check failed. User {args[1].display_name} failed the check: {check_func.__name__}. Command used: {func.__name__}"))
                         else:
-                            args[0]._call_event("on_error", DecoratorError(func, f"Command check failed. User {args[1].display_name} failed the check: {check_func.__name__}. Command used: {func.__name__}"))
+                            args[0]._call_event("on_error", DecoratorError(
+                                func, f"Command check failed. User {args[1].display_name} failed the check: {check_func.__name__}. Command used: {func.__name__}"))
                     return
                 elif func_val is True:
                     return func(*args, **kwargs)
                 else:
                     if len(args) > 1 and inspect.isclass(type(args[0])):
                         if not isinstance(args[0], Bot):
-                            args[0].bot._call_event("on_error", DecoratorError(func, f"The return function for @bot.check() needs to return either True or False. Return function name: {check_func.__name__}."))
+                            args[0].bot._call_event("on_error", DecoratorError(
+                                func, f"The return function for @bot.check() needs to return either True or False. Return function name: {check_func.__name__}."))
                         else:
-                            args[0]._call_event("on_error", DecoratorError(func, f"The return function for @bot.check() needs to return either True or False. Return function name: {check_func.__name__}."))
+                            args[0]._call_event("on_error", DecoratorError(
+                                func, f"The return function for @bot.check() needs to return either True or False. Return function name: {check_func.__name__}."))
                     return
         return _dec_check
     return _func_check
+
 
 class Bot():
 
@@ -347,7 +395,7 @@ class Bot():
         This should be True on most occasions.
         Could be False if using temporarily.
     """
-    
+
     def __init__(self, oauth, nick, prefix, channel, reconnect):
         # Check if the required types are given.
         if not isinstance(prefix, str):
@@ -355,7 +403,8 @@ class Bot():
         if not isinstance(oauth, str):
             raise TypeError("OAuth must be a string.")
         if not isinstance(channel, str) and not isinstance(channel, list):
-            raise TypeError("Channel must either be a string (only 1 channel) or list (multiple channels or 1 channel with single item list).")
+            raise TypeError(
+                "Channel must either be a string (only 1 channel) or list (multiple channels or 1 channel with single item list).")
         if not isinstance(nick, str):
             raise TypeError("Nickname (nick) must be a string.")
         if not isinstance(reconnect, bool):
@@ -363,7 +412,7 @@ class Bot():
 
         self.oauth = oauth
         self._prefix = prefix
-        self.nick = nick
+        self.nick = nick.lower()
         self.channels = [channel] if isinstance(channel, str) else channel
         self.reconnect = reconnect
         self.cogs = []
@@ -382,6 +431,8 @@ class Bot():
         self._thread = None
         self._cd_thread = None
         self._td_thread = None
+
+        self.channels = [channel.lower() for channel in self.channels]
 
         self._define_events()
         self._define_builtin_commands()
@@ -412,11 +463,13 @@ class Bot():
         if self._socket:
             self._socket.connect((host, port))
         else:
-            raise AttributeError("Couldn't connect, bot doesn't have a socket.")
+            raise AttributeError(
+                "Couldn't connect, bot doesn't have a socket.")
 
     def _receive(self):
         try:
-            self._read_buffer = self._read_buffer + self._socket.recv(self._RECV_AMOUNT).decode("utf-8")
+            self._read_buffer = self._read_buffer + \
+                self._socket.recv(self._RECV_AMOUNT).decode("utf-8")
         except (UnicodeDecodeError, socket.timeout, IOError):
             return None
         else:
@@ -445,7 +498,8 @@ class Bot():
         loading = True
         while loading:
             try:
-                read_buffer = read_buffer + self._socket.recv(self._RECV_AMOUNT).decode("utf-8")
+                read_buffer = read_buffer + \
+                    self._socket.recv(self._RECV_AMOUNT).decode("utf-8")
             except (UnicodeDecodeError, socket.timeout, IOError):
                 continue
             else:
@@ -456,7 +510,7 @@ class Bot():
                 if "JOIN" in line:
                     join = self._read_join(line)
                     self._call_event("channel_join", join)
-                    
+
                 if "End of /NAMES list" in line:
                     loading = False
 
@@ -464,7 +518,8 @@ class Bot():
     def _join_room(self):
         for channel in self.channels:
             if not isinstance(channel, str):
-                raise ValueError("One of the channels that was requested to join was not of type string.")
+                raise ValueError(
+                    "One of the channels that was requested to join was not of type string.")
 
             self._join_channel(channel)
 
@@ -490,7 +545,7 @@ class Bot():
     ###################################
     #              LOOP               #
     ###################################
-        
+
     def start(self):
         """
         Use this method to start the class:Bot:
@@ -524,7 +579,7 @@ class Bot():
 
     def _signal_handler(self, sig, frame):
         self.stop()
-    
+
     def _run(self):
         while self.running:
             # Receive from Twitch, then send to main_read() function.
@@ -532,12 +587,12 @@ class Bot():
             if temp:
                 for line in temp:
                     self._main_read(line)
-        
+
     def _run_cooldown(self):
         while self.running:
             time.sleep(1)
             removed = []
-            
+
             for cooldown in self.cooldowns:
                 cooldown.time -= 1
                 if cooldown.time <= 0:
@@ -557,7 +612,8 @@ class Bot():
                         try:
                             message.function(self, message)
                         except Exception as e:
-                            self._call_event("on_error", TimedMessageError(message.name, f"Error when calling timed_message. Error: {e}"))
+                            self._call_event("on_error", TimedMessageError(
+                                message.name, f"Error when calling timed_message. Error: {e}"))
                         message.current_chats = 0
 
     def stop(self):
@@ -584,7 +640,7 @@ class Bot():
         for tm in self.timed_messages:
             if tm.name == name and tm.channel == channel:
                 return True
-        
+
         return False
 
     def add_timed_message(self, name, required_chats, channel, time, function):
@@ -593,19 +649,22 @@ class Bot():
         """
 
         if not self._timed_messages_enabled:
-            self._call_event("on_error", TimedMessageError(None, "Timed Messages Disabled. Please use bot.start_timed_messages() to start it."))
+            self._call_event("on_error", TimedMessageError(
+                None, "Timed Messages Disabled. Please use bot.start_timed_messages() to start it."))
             return
 
         if not inspect.isfunction(function) and not inspect.ismethod(function):
-            self._call_event("on_error", TimedMessageError(None, "Function must be a function or a method (class function)."))
-            return
-        
-        if self._check_for_timed_message(name, channel):
-            self._call_event("on_error", TimedMessageError(None, f"Timed Message with name: \"{name}\" already exists for channel: \"{channel}\"."))
+            self._call_event("on_error", TimedMessageError(
+                None, "Function must be a function or a method (class function)."))
             return
 
-        self.timed_messages.append(TimedMessage(name, required_chats, channel, time, function))
-            
+        if self._check_for_timed_message(name, channel):
+            self._call_event("on_error", TimedMessageError(
+                None, f"Timed Message with name: \"{name}\" already exists for channel: \"{channel}\"."))
+            return
+
+        self.timed_messages.append(TimedMessage(
+            name, required_chats, channel, time, function))
 
     def remove_timed_message(self, name, channel):
         """
@@ -619,7 +678,7 @@ class Bot():
 
         for remove in removed:
             self.timed_messages.remove(remove)
-    
+
     def _handle_timed_messages(self, message):
         for tm in self.timed_messages:
             if tm.channel == message.channel:
@@ -658,7 +717,7 @@ class Bot():
         self.events.append(Event(25, "on_charity", 1))
         self.events.append(Event(26, "on_submysterygift", 1))
         self.events.append(Event(27, "command_fired", 2))
-    
+
     def _get_event(self, event_name):
         for event in self.events:
             if event.name == event_name:
@@ -684,7 +743,8 @@ class Bot():
                 event_args += 1
 
             if f_args != event_args:
-                warnings.warn(f"Event \"{event.name}\" does not have correct number of parameters. {event.args} needed; {f_args} given.")
+                warnings.warn(
+                    f"Event \"{event.name}\" does not have correct number of parameters. {event.args} needed; {f_args} given.")
                 return
             self._callbacks[func.__name__] = func
         else:
@@ -693,7 +753,7 @@ class Bot():
     ###################################
     #            MESSAGES             #
     ###################################
-        
+
     def send_message(self, channel, message):
         """
         This method is for sending a message to a channel.
@@ -716,35 +776,37 @@ class Bot():
             self._send_socket_message("PONG :tmi.twitch.tv")
             return
 
-        #USERNOTICE.
+        # USERNOTICE.
         if f":tmi.twitch.tv USERNOTICE #" in line:
             usernotice = self._read_usernotice(line)
             self._call_event("on_usernotice", usernotice)
             if hasattr(usernotice, f"to_{usernotice.msg_id}"):
-                self._call_event(f"on_{usernotice.msg_id}", getattr(usernotice, f"to_{usernotice.msg_id}")())
+                self._call_event(f"on_{usernotice.msg_id}", getattr(
+                    usernotice, f"to_{usernotice.msg_id}")())
             else:
-                self._call_event("on_error", CommonError(f"Twitch sent an unknown type of USERNOTICE: \"{usernotice.msg_id}\". Please submit a new issue to https://github.com/IsaacAKAJupiter/twitchircpy/issues including \"USERNOTICE\", \"{usernotice.msg_id}\" and \"{line}\" somewhere in the title or comment."))
+                self._call_event("on_error", CommonError(
+                    f"Twitch sent an unknown type of USERNOTICE: \"{usernotice.msg_id}\". Please submit a new issue to https://github.com/IsaacAKAJupiter/twitchircpy/issues including \"USERNOTICE\", \"{usernotice.msg_id}\" and \"{line}\" somewhere in the title or comment."))
             return
 
-        #USERSTATE.
+        # USERSTATE.
         if f":tmi.twitch.tv USERSTATE #" in line:
             userstate = self._read_userstate(line)
             self._call_event("on_userstate", userstate)
             return
 
-        #GLOBALUSERSTATE.
+        # GLOBALUSERSTATE.
         if f":tmi.twitch.tv GLOBALUSERSTATE" in line:
             globaluserstate = self._read_globaluserstate(line)
             self._call_event("on_globaluserstate", globaluserstate)
             return
 
-        #ROOMSTATE.
+        # ROOMSTATE.
         if ":tmi.twitch.tv ROOMSTATE #" in line:
             roomstate = self._read_roomstate(line)
             self._call_event("on_roomstate", roomstate)
             return
 
-        #JOIN.
+        # JOIN.
         if ".tmi.twitch.tv JOIN #" in line:
             join = self._read_join(line)
             if "#chatrooms" in line:
@@ -753,19 +815,19 @@ class Bot():
                 self._call_event("channel_join", join)
             return
 
-        #PART.
+        # PART.
         if ".tmi.twitch.tv PART #" in line:
             part = self._read_part(line)
             self._call_event("on_part", part)
             return
 
-        #jtv MODE.
+        # jtv MODE.
         if "jtv MODE #" in line:
             mode = self._read_mode(line)
             self._call_event("on_mode", mode)
             return
 
-        #CLEARCHAT.
+        # CLEARCHAT.
         if ":tmi.twitch.tv CLEARCHAT #" in line:
             clearchat = self._read_clearchat(line)
             self._call_event("on_clearchat", clearchat)
@@ -773,39 +835,40 @@ class Bot():
                 self._call_event("on_ban", clearchat.to_ban())
             return
 
-        #CLEARMSG.
+        # CLEARMSG.
         if ":tmi.twitch.tv CLEARMSG #" in line:
             clearmsg = self._read_clearmsg(line)
             self._call_event("on_clearmsg", clearmsg)
             return
 
-        #NOTICE.
+        # NOTICE.
         if ":tmi.twitch.tv NOTICE #" in line:
             notice = self._read_notice(line)
             self._call_event("on_notice", notice)
             return
 
-        #HOSTTARGET.
+        # HOSTTARGET.
         if ":tmi.twitch.tv HOSTTARGET #" in line:
             hosttarget = self._read_hosttarget(line)
             self._call_event("on_hosttarget", hosttarget)
             self._call_event("on_host", hosttarget)
             return
 
-        #PRIVMSG.
+        # PRIVMSG.
         if ".tmi.twitch.tv PRIVMSG #" in line:
             message, info = self._read_message(line)
             if message.bits:
                 self._call_event("on_cheer", message)
             self._call_event("on_message", message)
 
-            #Handle timed_messages.
+            # Handle timed_messages.
             self._handle_timed_messages(message)
 
-            #Handle commands.
+            # Handle commands.
             self._handle_commands(info)
         else:
-            warnings.warn(f"When recieving data from Twitch, this got read wrong or got sent incorrectly by Twitch: \"{line}\"")
+            warnings.warn(
+                f"When recieving data from Twitch, this got read wrong or got sent incorrectly by Twitch: \"{line}\"")
 
     def _read_default(self, message):
         splitspace = message.split(" ", 1)
@@ -822,7 +885,8 @@ class Bot():
         if ".tmi.twitch.tv PRIVMSG #" in message:
             if "\u0001ACTION " in message_data[2]:
                 params["has_me"] = True
-                message_data[2] = message_data[2].split("\u0001")[1].replace("ACTION ", "")
+                message_data[2] = message_data[2].split(
+                    "\u0001")[1].replace("ACTION ", "")
             else:
                 params["has_me"] = False
 
@@ -935,14 +999,17 @@ class Bot():
             cog_o = importlib.import_module(cog)
         except ModuleNotFoundError:
             if self._socket:
-                self._call_event("on_error", CogError(cog, f"An error occurred when trying to import the cog."))
+                self._call_event("on_error", CogError(
+                    cog, f"An error occurred when trying to import the cog."))
             else:
-                warnings.warn(f"An error occurred when importing cog: {cog}. This is a warning and not a class:Bot: error since it raised before \"run()\" was called.")
+                warnings.warn(
+                    f"An error occurred when importing cog: {cog}. This is a warning and not a class:Bot: error since it raised before \"run()\" was called.")
             return
 
         self.cogs.append(cog_o)
         if self._check_for_valid_cog(cog_o) == False:
-            self._call_event("on_error", CogError(cog, f"Attempt to add cog failed. Missing valid setup function."))
+            self._call_event("on_error", CogError(
+                cog, f"Attempt to add cog failed. Missing valid setup function."))
             self.remove_cog(cog)
         else:
             getattr(cog_o, "setup")(self)
@@ -1010,7 +1077,7 @@ class Bot():
                 return True
 
         return False
-    
+
     def _check_taken_command(self, command):
         if self.commands:
             for c in self.commands:
@@ -1043,7 +1110,8 @@ class Bot():
                 continue
 
             # Make the command object.
-            command_obj = Command(len(self.commands), i[0], cclass, i[1], None, None)
+            command_obj = Command(len(self.commands),
+                                  i[0], cclass, i[1], None, None)
 
             # Check if it has cooldown/aliases.
             if "_cooldown" in dir(i[1]):
@@ -1054,7 +1122,8 @@ class Bot():
 
             # Check if name or aliases already taken.
             if self._check_taken_command(command_obj):
-                warnings.warn(f"Command: {command_obj.name} was not added since there is another command that has the name or alias[es].")
+                warnings.warn(
+                    f"Command: {command_obj.name} was not added since there is another command that has the name or alias[es].")
                 return
 
             # Add the command.
@@ -1083,14 +1152,14 @@ class Bot():
         for c in self._builtin_commands:
             if c.name == command or c.aliases and command in c.aliases:
                 return True
-    
+
         return False
 
     def _get_builtin_command(self, command):
         for c in self._builtin_commands:
             if c.name == command or c.aliases and command in c.aliases:
                 return c
-        
+
         return None
 
     # Normal command functions.
@@ -1099,8 +1168,9 @@ class Bot():
         prefix = self._call_event("dynamic_prefix", info)
         prefix = self._prefix if not prefix else prefix
         if not isinstance(prefix, str):
-            self._call_event("on_error", EventError("dynamic_prefix", "This callback must return a string as the prefix."))
-            prefix = self._prefix 
+            self._call_event("on_error", EventError(
+                "dynamic_prefix", "This callback must return a string as the prefix."))
+            prefix = self._prefix
 
         if info.content.startswith(prefix):
             args = info.content.split(" ")
@@ -1116,7 +1186,7 @@ class Bot():
         for c in self.commands:
             if c.name == command or c.aliases and command in c.aliases:
                 return c
-        
+
         return None
 
     def check_command(self, command):
@@ -1127,7 +1197,7 @@ class Bot():
         for c in self.commands:
             if c.name == command or c.aliases and command in c.aliases:
                 return True
-    
+
         return False
 
     def silence_command(self, command):
@@ -1156,7 +1226,7 @@ class Bot():
         for command in self.silenced_commands:
             if command == c_id:
                 return True
-        
+
         return False
 
     def _check_command_in_cooldown(self, c_id, channel):
@@ -1171,15 +1241,25 @@ class Bot():
         # Builtin commands.
         if self._check_builtin_command(command) == True:
             command_o = self._get_builtin_command(command)
-            cooldown_o = self._check_command_in_cooldown(command_o.id, info.channel)
+            cooldown_o = self._check_command_in_cooldown(
+                command_o.id, info.channel)
             # Check for cooldown.
             if cooldown_o:
-                self._call_event("on_error", CooldownError(command_o, info.user, info.channel, f"Command on cooldown, please wait {cooldown_o.time} seconds."))
+                self._call_event("on_error", CooldownError(
+                    command_o, info.user, info.channel, f"Command on cooldown, please wait {cooldown_o.time} seconds."))
                 return
+
+            # if command_o.last_used:
+            #     expected_cooldown = command_o.last_used + datetime.timedelta(seconds=command_o.cooldown)
+            #     if datetime.datetime.now() < expected_cooldown:
+            #         actual_cooldown = expected_cooldown - datetime.datetime.now()
+            #         self._call_event("on_error", CooldownError(command_o, info.user, info.channel, f"Command on cooldown, please wait {actual_cooldown.seconds}.{actual_cooldown.microseconds} seconds."))
+            #         return
 
             # Check for silenced command.
             if self._check_command_silenced(command_o.id):
-                self._call_event("on_error", SilencedError(command_o, info.user, info.channel, "Command has been silenced, so it cannot be run."))
+                self._call_event("on_error", SilencedError(
+                    command_o, info.user, info.channel, "Command has been silenced, so it cannot be run."))
                 return
 
             # Run command.
@@ -1189,29 +1269,41 @@ class Bot():
                 self._add_cooldown(command_o, info.channel)
             # Call event for command fired.
             self._call_event("command_fired", info, command_o)
-                
 
         # Actual commands from cogs.
-        if self.check_command(command) == True:
+        if self.check_command(command):
             command_o = self.get_command(command)
-            cooldown_o = self._check_command_in_cooldown(command_o.id, info.channel)
+            cooldown_o = self._check_command_in_cooldown(
+                command_o.id, info.channel)
             # Check for cooldown.
             if cooldown_o:
-                self._call_event("on_error", CooldownError(command_o, info.user, info.channel, f"Command on cooldown, please wait {cooldown_o.time} seconds."))
+                self._call_event("on_error", CooldownError(
+                    command_o, info.user, info.channel, f"Command on cooldown, please wait {cooldown_o.time} seconds."))
                 return
+
+            # if command_o.last_used:
+            #     expected_cooldown = command_o.last_used + datetime.timedelta(seconds=command_o.cooldown)
+            #     if datetime.datetime.now() < expected_cooldown:
+            #         actual_cooldown = expected_cooldown - datetime.datetime.now()
+            #         self._call_event("on_error", CooldownError(command_o, info.user, info.channel, f"Command on cooldown, please wait {actual_cooldown.seconds}.{actual_cooldown.microseconds} seconds."))
+            #         return
 
             # Check for silenced command.
             if self._check_command_silenced(command_o.id):
-                self._call_event("on_error", SilencedError(command_o, info.user, info.channel, "Command has been silenced, so it cannot be run."))
+                self._call_event("on_error", SilencedError(
+                    command_o, info.user, info.channel, "Command has been silenced, so it cannot be run."))
                 return
 
             # Run command.
             try:
-                command_o.function(command_o.cog, info, *args) if args else command_o.function(command_o.cog, info)
+                command_o.function(
+                    command_o.cog, info, *args) if args else command_o.function(command_o.cog, info)
             except TypeError as e:
-                self._call_event("on_error", CommandError(command_o, info.user, info.channel, f"Error running function -> TypeError: {e}"))
+                self._call_event("on_error", CommandError(
+                    command_o, info.user, info.channel, f"Error running function -> TypeError: {e}"))
                 return
             # Add cooldown if command has it.
+            #command_o.last_used = datetime.datetime.now()
             if command_o.cooldown:
                 self._add_cooldown(command_o, info.channel)
             # Call event for command_fired.
@@ -1221,7 +1313,7 @@ class Bot():
         self.cooldowns.append(Cooldown(command.id, channel, command.cooldown))
 
     # Actual chat commands.
-    def ban(self, channel, user, reason = None):
+    def ban(self, channel, user, reason=None):
         """
         This is the built-in Twitch chat command for banning a user.
         \nEquivalent to:
@@ -1279,13 +1371,15 @@ class Bot():
         \nsend_message(channel, f".color {color}")
         """
 
-        colors = ["Blue", "BlueViolet", "CadetBlue", "Chocolate", "Coral", "DodgerBlue", "Firebrick", "GoldenRod", "Green", "HotPink", "OrangeRed", "Red", "SeaGreen", "SpringGreen", "YellowGreen"]
+        colors = ["Blue", "BlueViolet", "CadetBlue", "Chocolate", "Coral", "DodgerBlue", "Firebrick",
+                  "GoldenRod", "Green", "HotPink", "OrangeRed", "Red", "SeaGreen", "SpringGreen", "YellowGreen"]
         if re.search(r"^(#)[A-Fa-f0-9]+$", color) or color in colors:
             self.send_message(channel, f".color {color}")
         else:
-            self._call_event("on_error", CommonError("Color given is neither a HEX code nor a string color predefined by Twitch."))
+            self._call_event("on_error", CommonError(
+                "Color given is neither a HEX code nor a string color predefined by Twitch."))
 
-    def commercial(self, channel, length = None):
+    def commercial(self, channel, length=None):
         """
         This is the built-in Twitch chat command for running a commercial.
         \nEquivalent to:
@@ -1299,7 +1393,7 @@ class Bot():
         else:
             self.send_message(channel, ".commercial")
 
-    def timeout(self, channel, user, length = 600, reason = None):
+    def timeout(self, channel, user, length=600, reason=None):
         """
         This is the built-in Twitch chat command for timing out a user.
         \nEquivalent to:
@@ -1322,7 +1416,7 @@ class Bot():
 
         self.send_message(channel, f".untimeout {user}")
 
-    def slow(self, channel, amount = None):
+    def slow(self, channel, amount=None):
         """
         This is the built-in Twitch chat command for enabling slow mode for a channel.
         \nEquivalent to:
@@ -1330,7 +1424,7 @@ class Bot():
         \nOr:
         \nsend_message(channel, ".slow")
         """
-        
+
         if amount:
             self.send_message(channel, f".slow {amount}")
         else:
@@ -1408,7 +1502,7 @@ class Bot():
 
         self.send_message(channel, ".subscribersoff")
 
-    def followers(self, channel, duration = None):
+    def followers(self, channel, duration=None):
         """
         This is the built-in Twitch chat command for enabling followers-only mode for a channel.
         \nNote: {duration} is the length a user must have been following for to be able to chat. Leaving it :None: will allow all followers to chat.
