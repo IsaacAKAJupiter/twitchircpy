@@ -4,6 +4,7 @@ import twitchircpy
 
 bot = twitchircpy.Bot("oauth", "nick", "!", "jups", True)
 cogs = ["cogs.general", "cogs.mod"]   # Gets each cog from the cogs directory.
+
 bot.add_cogs(cogs)  # Add the cogs and initialize the commands.
 # Commands are handled internally, no other necessary initialization.
 
