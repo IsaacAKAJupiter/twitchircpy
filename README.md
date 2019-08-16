@@ -9,19 +9,19 @@ twitchircpy is a wrapper for the Twitch IRC used for creating chat bots.
 
 Installing from PyPI:
 
-```
+```bash
 pip install twitchircpy
 ```
 
 Installing from source:
 
-```
+```bash
 pip install git+https://github.com/IsaacAKAJupiter/twitchircpy.git
 ```
 
 You might have to install with these commands if the above installs for Python 2.
 
-```
+```bash
 pip3 install twitchircpy
 pip3 install git+https://github.com/IsaacAKAJupiter/twitchircpy.git
 ```

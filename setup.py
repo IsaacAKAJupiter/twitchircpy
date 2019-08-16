@@ -7,6 +7,7 @@ setuptools.setup(
     name="twitchircpy",
     version="1.0.5",
     author="IsaacAKAJupiter",
+    author_email="oramisaac@gmail.com",
     description="A wrapper for the Twitch IRC used for creating chat bots.",
     long_description=long_description,
     long_description_content_type="text/markdown",
